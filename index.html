@@ -2,925 +2,782 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>우리집 스마트 가계부</title>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- 폰트 (Pretendard) -->
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MinEnglish - 영어 공부 스케줄러</title>
     
-    <style>
-        :root {
-            --primary: #6c5ce7;
-            --income: #00b894; /* 수입 색상 (녹색) */
-            --expense: #6c5ce7; /* 지출 색상 (보라) */
-            --bg: #f5f6fa;
-            --card-bg: #ffffff;
-            --text-main: #2d3436;
-            --text-sub: #636e72;
-            --border: #dfe6e9;
-            --danger: #ff7675;
-            --hover-bg: #f1f2f6;
-        }
+    <!-- React & DOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    
+    <!-- Babel (JSX 변환용) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons (Vanilla) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
-        body {
+    <!-- Firebase SDK (Version 9 - Modular) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // ------------------------------------------------------------------
+        // [설정 완료] MinEnglish 프로젝트 정보
+        // ------------------------------------------------------------------
+        const firebaseConfig = {
+            apiKey: "AIzaSyA4vQpCH9tXgEoJXwDZFxg9GNkFUFa_g8M",
+            authDomain: "minenglish-4cd89.firebaseapp.com",
+            projectId: "minenglish-4cd89",
+            storageBucket: "minenglish-4cd89.firebasestorage.app",
+            messagingSenderId: "342180365020",
+            appId: "1:342180365020:web:578114c4ffc7df889f2a19",
+            measurementId: "G-6RFNRW193X"
+        };
+
+        // 전역 변수로 노출하여 React 컴포넌트에서 사용
+        window.firebaseModules = { initializeApp, getFirestore, doc, setDoc, onSnapshot, getDoc, firebaseConfig };
+    </script>
+
+    <!-- Font -->
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+
+    <style>
+        body { 
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; 
+            background-color: #f8fafc; 
             margin: 0;
             padding: 0;
-            font-family: 'Pretendard', sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
-            -webkit-font-smoothing: antialiased;
-            width: 100%;
-            overflow-x: hidden;
+            overflow: hidden; 
         }
-
-        /* 전체 레이아웃 */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 380px 1fr;
-            gap: 25px;
-            box-sizing: border-box;
-        }
-
-        /* 상단 월 선택 */
-        .header-bar {
-            grid-column: 1 / -1;
-            margin-bottom: 10px;
-        }
-        .month-selector {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: var(--text-main);
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            font-family: 'Pretendard', sans-serif;
-            outline: none;
-            padding: 0;
-        }
-
-        /* 카드 박스 스타일 */
-        .card {
-            background: var(--card-bg);
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.03);
-            margin-bottom: 20px;
-        }
-
-        h3 { font-size: 1.1rem; color: var(--text-sub); margin-top: 0; margin-bottom: 20px; font-weight: 700; }
-
-        /* 대시보드 (통계 박스) - 수정됨 */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr); /* 3등분 고정 */
-            gap: 10px;
-            margin-bottom: 20px;
-            align-items: stretch; /* 높이 동일하게 맞춤 */
-        }
-        .stat-box {
-            background: #fff;
-            padding: 15px 5px;
-            border-radius: 16px;
-            text-align: center;
-            border: 1px solid var(--border);
-            /* 내용 정렬 및 크기 고정 */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 80px;
-            overflow: hidden; /* 내용 넘침 방지 */
-        }
-        .stat-title { 
-            font-size: 0.8rem; 
-            color: var(--text-sub); 
-            margin-bottom: 5px; 
-            white-space: nowrap; /* 줄바꿈 방지 */
-        }
-        .stat-value { 
-            font-size: 1.1rem; 
-            font-weight: 800; 
-            word-break: break-all;
-            line-height: 1.2;
-            /* 기본 글자 크기 */
-        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        #total-income { color: var(--income); }
-        #total-expense { color: var(--expense); }
-        #balance { color: var(--text-main); }
-
-        /* 수입/지출 전환 탭 */
-        .type-tabs {
-            display: flex;
-            background: #f1f2f6;
-            padding: 4px;
-            border-radius: 12px;
-            margin-bottom: 20px;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .tab-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            background: transparent;
-            border-radius: 10px;
-            font-weight: 700;
-            color: var(--text-sub);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .tab-btn.active.expense {
-            background: #fff;
-            color: var(--expense);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        .tab-btn.active.income {
-            background: #fff;
-            color: var(--income);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
         }
 
-        /* 입력 폼 디자인 */
-        .form-group { margin-bottom: 15px; }
-        label { 
-            display: block; 
-            font-size: 0.85rem; 
-            color: var(--text-sub); 
-            margin-bottom: 6px; 
-            font-weight: 600; 
-            margin-left: 2px;
-        }
-        
-        .input-box {
-            width: 100%;
-            padding: 14px;
-            border: 1px solid #ced6e0;
-            border-radius: 12px;
-            font-size: 1rem;
-            box-sizing: border-box;
-            background: #fafafa;
-            color: var(--text-main);
-            font-family: inherit;
-            appearance: none;
-            -webkit-appearance: none;
-            transition: all 0.2s;
-        }
-        .input-box:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: #fff;
-            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
-        }
-
-        .row-group { display: flex; gap: 10px; }
-        .col { flex: 1; }
-
-        select.input-box {
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a4b0be' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 15px center;
-            background-size: 16px;
-            padding-right: 40px;
-        }
-
-        /* 카테고리 그리드 */
-        .category-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-        .cat-btn {
-            padding: 12px;
-            border: 1px solid var(--border);
-            background: white;
-            border-radius: 12px;
-            color: var(--text-sub);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-        }
-        .cat-btn:hover { background: #f1f2f6; }
-        .cat-btn.active {
-            color: white;
-            border-color: transparent;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
-        /* 지출용 활성 스타일 */
-        .expense-mode .cat-btn.active { background: var(--expense); }
-        /* 수입용 활성 스타일 */
-        .income-mode .cat-btn.active { background: var(--income); }
-
-        /* 저장 버튼 */
-        .save-btn {
-            width: 100%;
-            color: white;
-            border: none;
-            padding: 18px;
-            border-radius: 14px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 20px;
-        }
-        .expense-mode .save-btn { background: var(--expense); }
-        .income-mode .save-btn { background: var(--income); }
-        .save-btn:hover { opacity: 0.9; }
-
-        /* 테이블 스타일 */
-        .table-container { overflow-x: visible; min-height: 400px; }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; }
-        
-        th { 
-            text-align: left; 
-            padding: 15px 10px; 
-            color: var(--text-sub); 
-            border-bottom: 2px solid var(--border); 
-            font-size: 0.9rem; 
-            white-space: nowrap; 
-            position: relative;
-            user-select: none;
-            cursor: pointer;
-        }
-        th:hover { background-color: #fafafa; }
-        
-        .icon-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-left: 4px;
-            font-size: 0.8rem;
-            color: #b2bec3;
-        }
-        
-        /* 수입/지출 행 스타일 */
-        .expense-row.income-row {
-            background-color: rgba(0, 184, 148, 0.08); /* 연한 녹색 */
-        }
-        .expense-row.income-row:hover {
-            background-color: rgba(0, 184, 148, 0.15);
-        }
-
-        td { padding: 18px 10px; border-bottom: 1px solid var(--border); font-size: 0.95rem; vertical-align: middle; }
-        .text-right { text-align: right; }
-        .tag { display: inline-block; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; }
-        
-        .delete-btn { 
-            background: none; 
-            border: none; 
-            color: #b2bec3; 
-            cursor: pointer; 
-            font-size: 1.2rem;
-            padding: 8px; /* 터치 영역 확대 */
-        }
-        .delete-btn:hover { color: var(--danger); }
-
-        /* 필터 드롭다운 */
-        .filter-dropdown {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            z-index: 100;
-            min-width: 120px;
-            padding: 8px 0;
-        }
-        .filter-dropdown.show { display: block; }
-        .filter-item { padding: 10px 16px; font-size: 0.9rem; cursor: pointer; }
-        .filter-item:hover { background: var(--bg); }
-        .filter-item.selected { font-weight: bold; color: var(--primary); background: #f0f0ff; }
-
-        /* 모바일 반응형 */
-        @media (max-width: 768px) {
-            .container { grid-template-columns: 1fr; padding: 15px; gap: 15px; }
-            .header-bar { margin-bottom: 5px; }
-            .left-panel { order: 1; }
-            .right-panel { order: 2; }
-            
-            table, thead, tbody, th, td, tr { display: block; }
-            table { width: 100%; min-width: 0; } /* min-width: 600px 해제 */
-            thead { display: none; }
-
-            .mobile-filter-bar {
-                display: flex;
-                gap: 8px;
-                margin-bottom: 15px;
-                overflow-x: auto;
-                padding-bottom: 5px;
-            }
-            .mobile-filter-btn {
-                padding: 8px 14px;
-                border: 1px solid var(--border);
-                border-radius: 20px;
-                background: #fff;
-                font-size: 0.85rem;
-                white-space: nowrap;
-                color: var(--text-sub);
-                font-weight: 600;
-            }
-
-            .expense-row {
-                background: #fff;
-                border: 1px solid var(--border);
-                border-radius: 16px;
-                margin-bottom: 12px;
-                padding: 16px;
-                position: relative;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-            }
-            
-            td { border: none; padding: 2px 0; display: flex; justify-content: space-between; align-items: center; }
-            
-            td:nth-of-type(1) { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 8px; order: 1; }
-            td:nth-of-type(2) { position: absolute; top: 16px; right: 16px; order: 2; }
-            td:nth-of-type(3) { font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 4px; display: block; order: 3; }
-            td:nth-of-type(4) {
-                font-size: 0.85rem; color: #636e72; background: rgba(0,0,0,0.03);
-                display: inline-block; padding: 4px 8px; border-radius: 6px; margin-bottom: 8px; order: 4;
-            }
-            td:nth-of-type(5) { 
-                font-size: 1.25rem; font-weight: 800; color: var(--text-main); 
-                display: block; text-align: right; margin-top: 5px; order: 5;
-            }
-            /* 수입 금액 색상 */
-            .income-row td:nth-of-type(5) { color: var(--income); }
-            /* 지출 금액 색상 */
-            .expense-row:not(.income-row) td:nth-of-type(5) { color: var(--expense); }
-
-            /* 삭제 버튼 개선: 위치와 크기 조정 */
-            td:nth-of-type(6) { 
-                position: absolute; 
-                bottom: 12px; 
-                right: 12px; 
-                order: 6; 
-                padding: 0;
-            }
-            .delete-btn {
-                font-size: 1.5rem; /* 터치하기 좋게 키움 */
-                padding: 10px;
-                color: #b2bec3;
-            }
-
-            /* 모바일 대시보드 폰트 사이즈 조정 */
-            .stat-value {
-                /* 화면 크기에 따라 글자 크기 유동적 조절 */
-                font-size: clamp(0.85rem, 4vw, 1.1rem);
-            }
-            .dashboard-grid {
-                gap: 8px;
-            }
-            .stat-box {
-                padding: 12px 2px;
-            }
-        }
-        
-        @media (min-width: 769px) {
-            .mobile-filter-bar { display: none; }
-        }
-
-        /* 요소 숨김용 클래스 */
-        .hidden { display: none !important; }
+        @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes modalScaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-overlay { animation: modalFadeIn 0.2s ease-out forwards; }
+        .modal-content { animation: modalScaleIn 0.2s ease-out forwards; }
     </style>
 </head>
 <body>
+    <div id="root"></div>
 
-    <div class="container">
-        
-        <div class="header-bar">
-            <input type="month" id="month-picker" class="month-selector">
-        </div>
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
 
-        <div class="left-panel">
-            <!-- 대시보드 (수정됨: 수입/지출/잔액) -->
-            <div class="dashboard-grid">
-                <div class="stat-box">
-                    <div class="stat-title">총 수입</div>
-                    <div class="stat-value" id="total-income">0원</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-title">총 지출</div>
-                    <div class="stat-value" id="total-expense">0원</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-title">잔액</div>
-                    <div class="stat-value" id="balance">0원</div>
-                </div>
-            </div>
-
-            <!-- ✏️ 입력 폼 -->
-            <div class="card" id="record-card">
-                <!-- 탭 버튼 -->
-                <div class="type-tabs">
-                    <button class="tab-btn active expense" onclick="toggleMode('expense')">지출</button>
-                    <button class="tab-btn income" onclick="toggleMode('income')">수입</button>
-                </div>
-                
-                <h3 id="form-title">✏️ 지출 기록하기</h3>
-                
-                <div class="form-group">
-                    <label>날짜</label>
-                    <input type="date" id="input-date" class="input-box">
-                </div>
-
-                <div class="form-group">
-                    <label>내용</label>
-                    <input type="text" id="input-merchant" class="input-box" placeholder="내용을 입력하세요">
-                </div>
-
-                <div class="row-group">
-                    <div class="col form-group">
-                        <label>금액</label>
-                        <!-- 수정 1: type="number" 대신 text 사용, inputmode="numeric" 추가 -->
-                        <input type="text" id="input-amount" class="input-box" placeholder="0" inputmode="numeric">
-                    </div>
-                    <div class="col form-group">
-                        <label id="method-label">결제 수단</label>
-                        
-                        <!-- 1. 지출용: 드롭다운 -->
-                        <select id="input-card" class="input-box">
-                            <option value="" disabled selected>선택</option>
-                            <option value="민우신용">민우신용</option>
-                            <option value="민우체크">민우체크</option>
-                            <option value="소연신용">소연신용</option>
-                            <option value="소연체크">소연체크</option>
-                            <option value="생활비카드">생활비카드</option>
-                            <option value="현금">현금</option>
-                        </select>
-                        
-                        <!-- 2. 수입용: 일반 텍스트 입력 (초기엔 숨김) -->
-                        <input type="text" id="input-source" class="input-box hidden" placeholder="예: 회사, 은행">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>카테고리</label>
-                    
-                    <!-- 지출 카테고리 -->
-                    <div class="category-grid" id="expense-cats">
-                        <button class="cat-btn" onclick="setCategory('식비')">🍚 식비</button>
-                        <button class="cat-btn" onclick="setCategory('쇼핑')">🛍️ 쇼핑</button>
-                        <button class="cat-btn" onclick="setCategory('교통')">🚎 교통</button>
-                        <button class="cat-btn" onclick="setCategory('주거')">🏠 주거</button>
-                        <button class="cat-btn" onclick="setCategory('의료')">🏥 의료</button>
-                        <button class="cat-btn" onclick="setCategory('기타')">🎸 기타</button>
-                    </div>
-
-                    <!-- 수입 카테고리 (초기엔 숨김) -->
-                    <div class="category-grid hidden" id="income-cats">
-                        <button class="cat-btn" onclick="setCategory('월급')">💰 월급</button>
-                        <button class="cat-btn" onclick="setCategory('투자')">📈 투자</button>
-                        <!-- 수정 2: 폭죽(🎉) 대신 편지봉투(✉️)로 변경 -->
-                        <button class="cat-btn" onclick="setCategory('경조사')">✉️ 경조사</button>
-                        <button class="cat-btn" onclick="setCategory('기타')">🎸 기타</button>
-                    </div>
-                </div>
-
-                <button class="save-btn" onclick="addTransaction()">기록 저장하기</button>
-            </div>
-
-            <!-- 차트 -->
-            <div class="card">
-                <h3>📊 카테고리별 분석</h3>
-                <div style="height: 250px; display: flex; justify-content: center;">
-                    <canvas id="expenseChart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="right-panel">
-            <div class="card" style="min-height: 600px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <h3 style="margin:0;">📜 상세 내역</h3>
-                    
-                    <!-- 수정됨: 날짜 선택 UI + 선택된 날짜 표시 + X 버튼 -->
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="position: relative; width: 30px; height: 30px;">
-                            <span id="calendar-btn" style="cursor: pointer; font-size: 1.5rem;" title="일별 보기">📅</span>
-                            <!-- 투명 date input -->
-                            <input type="date" id="daily-date-picker" style="position: absolute; opacity: 0; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer; z-index: 10;">
-                        </div>
-                        
-                        <!-- 선택된 날짜 텍스트 (예: 01/04) -->
-                        <span id="selected-date-display" style="font-size: 0.95rem; font-weight: 700; color: var(--primary);"></span>
-                        
-                        <!-- X 버튼 (선택 시에만 보임) -->
-                        <button id="clear-date-btn" class="hidden" style="background: rgba(0,0,0,0.1); border: none; border-radius: 50%; cursor: pointer; font-size: 0.9rem; color: #636e72; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; padding: 0;">&times;</button>
-                    </div>
-                </div>
-
-                <div class="mobile-filter-bar">
-                    <div class="mobile-filter-btn active" onclick="resetFilters()">전체</div>
-                    <div class="mobile-filter-btn" onclick="toggleSort('amount')">💰 금액순</div>
-                </div>
-                
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th width="15%" onclick="toggleSort('date')">날짜 <span class="icon-btn" id="icon-date">▼</span></th>
-                                <th width="15%">카테고리</th>
-                                <th width="25%">내용</th>
-                                <th width="15%">결제/출처</th>
-                                <th width="20%" class="text-right" onclick="toggleSort('amount')">금액 <span class="icon-btn" id="icon-amount">⇵</span></th>
-                                <th width="10%"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="expense-list"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase SDK 및 로직 -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } 
-        from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyCE-XSrGqSApyyEG-KAurUtRc-tVDR8XCI",
-            authDomain: "money-aef17.firebaseapp.com",
-            projectId: "money-aef17",
-            storageBucket: "money-aef17.appspot.com",
-            messagingSenderId: "", 
-            appId: "" 
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const COLLECTION_NAME = "expenses";
-
-        // 상태 변수
-        let currentMode = "expense"; // 'expense' or 'income'
-        let currentCategory = "";
-        let chartInstance = null;
-        let allExpenses = []; 
-
-        // 필터 및 정렬 상태
-        let filterState = { category: 'all', card: 'all' };
-        let sortState = { field: 'date', order: 'desc' };
-        let selectedDateFilter = null; // 일자별 필터 상태 추가
-
-        // 초기 설정
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        document.getElementById('input-date').value = `${yyyy}-${mm}-${dd}`;
-        
-        const monthPicker = document.getElementById('month-picker');
-        monthPicker.value = `${yyyy}-${mm}`;
-        monthPicker.addEventListener('change', () => {
-            // 월을 변경하면 일자 필터 초기화
-            selectedDateFilter = null;
-            document.getElementById('selected-date-display').innerText = "";
-            document.getElementById('clear-date-btn').classList.add('hidden');
-            document.getElementById('daily-date-picker').value = "";
-            renderData();
-        });
-
-        // --- 수정됨: 일자별 필터 기능 (텍스트 표시 및 X 버튼) ---
-        const dailyPicker = document.getElementById('daily-date-picker');
-        const displaySpan = document.getElementById('selected-date-display');
-        const clearBtn = document.getElementById('clear-date-btn');
-
-        const handleDateChange = (e) => {
-            const val = e.target.value;
-            
-            if (val) {
-                // 날짜가 선택된 경우
-                selectedDateFilter = val;
-                const [y, m, d] = val.split('-');
-                displaySpan.innerText = `${m}/${d}`; // 예: 05/20
-                clearBtn.classList.remove('hidden');
-            } else {
-                // 날짜가 비워진 경우 (브라우저 기본 클리어 포함)
-                selectedDateFilter = null;
-                displaySpan.innerText = "";
-                clearBtn.classList.add('hidden');
-            }
-            renderData();
-        };
-
-        dailyPicker.addEventListener('change', handleDateChange);
-        dailyPicker.addEventListener('input', handleDateChange); // 실시간 반응
-
-        // X 버튼 클릭 시 초기화
-        clearBtn.addEventListener('click', () => {
-            dailyPicker.value = "";
-            selectedDateFilter = null;
-            displaySpan.innerText = "";
-            clearBtn.classList.add('hidden');
-            renderData();
-        });
-        
-        // --- 금액 입력 시 자동 쉼표(,) 처리 로직 ---
-        const amountInput = document.getElementById('input-amount');
-        amountInput.addEventListener('input', function(e) {
-            // 입력된 값에서 숫자만 추출
-            let value = e.target.value.replace(/[^0-9]/g, '');
-            if(value) {
-                // 숫자를 천 단위 콤마 포맷으로 변환하여 다시 입력창에 표시
-                e.target.value = Number(value).toLocaleString();
-            } else {
-                e.target.value = '';
-            }
-        });
-        // ----------------------------------------------------
-
-        // 전역 함수 등록
-        window.renderData = renderData;
-        
-        // 모드 전환 (지출 <-> 수입)
-        window.toggleMode = (mode) => {
-            currentMode = mode;
-            currentCategory = ""; // 카테고리 초기화
-            
-            const card = document.getElementById('record-card');
-            const btns = document.querySelectorAll('.tab-btn');
-            const expenseCats = document.getElementById('expense-cats');
-            const incomeCats = document.getElementById('income-cats');
-            const inputCard = document.getElementById('input-card'); // 드롭다운
-            const inputSource = document.getElementById('input-source'); // 텍스트창
-            const methodLabel = document.getElementById('method-label');
-            const title = document.getElementById('form-title');
-
-            // 버튼 스타일
-            btns.forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`.tab-btn.${mode}`).classList.add('active');
-
-            // 내용물 토글
-            if(mode === 'expense') {
-                card.classList.remove('income-mode');
-                card.classList.add('expense-mode');
-                title.innerText = "✏️ 지출 기록하기";
-                methodLabel.innerText = "결제 수단";
-                
-                inputCard.classList.remove('hidden');
-                inputSource.classList.add('hidden');
-                
-                expenseCats.classList.remove('hidden');
-                incomeCats.classList.add('hidden');
-            } else {
-                card.classList.remove('expense-mode');
-                card.classList.add('income-mode');
-                title.innerText = "💰 수입 기록하기";
-                methodLabel.innerText = "입금처";
-                
-                inputCard.classList.add('hidden');
-                inputSource.classList.remove('hidden');
-                
-                expenseCats.classList.add('hidden');
-                incomeCats.classList.remove('hidden');
-            }
-
-            // 카테고리 선택 초기화
-            document.querySelectorAll('.cat-btn').forEach(btn => btn.classList.remove('active'));
-        }
-
-        window.setCategory = (cat) => {
-            currentCategory = cat;
-            document.querySelectorAll('.cat-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if(btn.innerText.includes(cat)) btn.classList.add('active');
-            });
-        }
-
-        // 통합 저장 함수
-        window.addTransaction = async () => {
-            const date = document.getElementById('input-date').value;
-            const merchant = document.getElementById('input-merchant').value;
-            
-            // --- 금액 저장 시 콤마 제거 후 숫자로 변환 ---
-            const rawAmount = document.getElementById('input-amount').value.replace(/,/g, '');
-            const amount = Number(rawAmount);
-            // ---------------------------------------------------
-            
-            // 모드에 따라 결제수단/입금처 값 가져오기
-            let method = "";
-            if(currentMode === 'expense') {
-                method = document.getElementById('input-card').value;
-            } else {
-                method = document.getElementById('input-source').value;
-            }
-
-            if(!date || !merchant || !amount || !currentCategory || !method) {
-                alert("모든 항목을 입력해주세요!");
-                return;
-            }
-
-            const btn = document.querySelector('.save-btn');
-            btn.innerText = "저장 중...";
-            btn.disabled = true;
-
-            try {
-                await addDoc(collection(db, COLLECTION_NAME), {
-                    type: currentMode, // 'income' or 'expense'
-                    date: date,
-                    merchant: merchant,
-                    amount: amount,
-                    category: currentCategory,
-                    card: method, // DB 필드명은 호환성을 위해 card 유지 (실제론 method 역할)
-                    createdAt: new Date().toISOString()
-                });
-                
-                // 입력창 초기화
-                document.getElementById('input-merchant').value = '';
-                document.getElementById('input-amount').value = '';
-                if(currentMode === 'income') document.getElementById('input-source').value = '';
-                
-                btn.innerText = "기록 저장하기";
-                btn.disabled = false;
-                
-            } catch (error) {
-                console.error("Error:", error);
-                alert("저장 실패");
-                btn.innerText = "기록 저장하기";
-                btn.disabled = false;
-            }
-        }
-
-        window.deleteItem = async (id) => {
-            if(confirm("정말 삭제하시겠습니까?")) {
-                await deleteDoc(doc(db, COLLECTION_NAME, id));
-            }
-        }
-
-        // 헤더 필터/정렬 함수들
-        window.toggleSort = (field) => {
-            if(sortState.field === field) {
-                sortState.order = sortState.order === 'desc' ? 'asc' : 'desc';
-            } else {
-                sortState.field = field;
-                sortState.order = 'desc';
-            }
-            renderData();
-        };
-
-        window.resetFilters = () => {
-            filterState = { category: 'all', card: 'all' };
-            sortState = { field: 'date', order: 'desc' };
-            
-            // 날짜 필터도 초기화
-            selectedDateFilter = null;
-            dailyPicker.value = "";
-            displaySpan.innerText = "";
-            clearBtn.classList.add('hidden');
-            
-            renderData();
-        }
-
-        // 데이터 리스너
-        const q = query(collection(db, COLLECTION_NAME), orderBy("date", "desc"));
-        onSnapshot(q, (snapshot) => {
-            allExpenses = [];
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                if(!data.type) data.type = 'expense';
-                if(!data.card) data.card = "기타";
-                allExpenses.push({ id: doc.id, ...data });
-            });
-            renderData();
-        });
-
-        function renderData() {
-            const selectedMonth = monthPicker.value;
-            const listBody = document.getElementById('expense-list');
-            listBody.innerHTML = "";
-
-            let filteredData = [];
-
-            // 1. 필터 로직
-            if (selectedDateFilter) {
-                // 일자별 필터가 활성화된 경우
-                filteredData = allExpenses.filter(item => item.date === selectedDateFilter);
-            } else {
-                // 기본 월간 필터
-                filteredData = allExpenses.filter(item => item.date.startsWith(selectedMonth));
-            }
-
-            // 2. 정렬
-            filteredData.sort((a, b) => {
-                let valA, valB;
-                if(sortState.field === 'amount') {
-                    valA = a.amount;
-                    valB = b.amount;
-                } else {
-                    valA = a.date;
-                    valB = b.date;
-                }
-
-                if(sortState.order === 'desc') return valA > valB ? -1 : 1;
-                else return valA > valB ? 1 : -1;
-            });
-
-            // UI 상태 업데이트
-            const sortIcon = sortState.order === 'desc' ? '▼' : '▲';
-            document.getElementById('icon-date').innerText = sortState.field === 'date' ? sortIcon : '▿';
-            document.getElementById('icon-amount').innerText = sortState.field === 'amount' ? sortIcon : '⇵';
-
-            // 통계 계산
-            let totalIncome = 0;
-            let totalExpense = 0;
-            let categoryStats = {}; 
-
-            if (filteredData.length === 0) {
-                listBody.innerHTML = `<div style="padding:40px; text-align:center; color:#b2bec3; grid-column:1/-1;">기록이 없습니다.</div>`;
-            }
-
-            filteredData.forEach((data) => {
-                if(data.type === 'income') {
-                    totalIncome += data.amount;
-                } else {
-                    totalExpense += data.amount;
-                    if (categoryStats[data.category]) categoryStats[data.category] += data.amount;
-                    else categoryStats[data.category] = data.amount;
-                }
-
-                const formattedDate = data.date.replace(/-/g, '/');
-                const rowClass = data.type === 'income' ? 'expense-row income-row' : 'expense-row';
-                
-                const tr = document.createElement('tr');
-                tr.className = rowClass;
-                
-                tr.innerHTML = `
-                    <td>${formattedDate}</td>
-                    <td><span class="tag" style="background:${getCategoryColor(data.category)}20; color:${getCategoryColor(data.category)}">${data.category}</span></td>
-                    <td>${data.merchant}</td>
-                    <td>${data.card}</td>
-                    <td class="text-right"><strong>${data.amount.toLocaleString()}</strong>원</td>
-                    <td class="text-right"><button class="delete-btn" onclick="deleteItem('${data.id}')">&times;</button></td>
-                `;
-                listBody.appendChild(tr);
-            });
-
-            // 대시보드 업데이트
-            document.getElementById('total-income').innerText = totalIncome.toLocaleString() + "원";
-            document.getElementById('total-expense').innerText = totalExpense.toLocaleString() + "원";
-            document.getElementById('balance').innerText = (totalIncome - totalExpense).toLocaleString() + "원";
-
-            updateChart(categoryStats);
-        }
-
-        function getCategoryColor(cat) {
-            switch(cat) {
-                /* 지출 */
-                case '식비': return '#fd79a8';
-                case '쇼핑': return '#a29bfe';
-                case '교통': return '#74b9ff';
-                case '주거': return '#e17055';
-                case '의료': return '#ff7675';
-                
-                /* 수입 */
-                case '월급': return '#00b894';
-                case '투자': return '#0984e3';
-                case '경조사': return '#fab1a0';
-                
-                default: return '#636e72';
-            }
-        }
-
-        function updateChart(stats) {
-            const ctx = document.getElementById('expenseChart').getContext('2d');
-            const labels = Object.keys(stats);
-            const data = Object.values(stats);
-            const bgColors = labels.map(cat => getCategoryColor(cat));
-
-            if(chartInstance) chartInstance.destroy();
-
-            chartInstance = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: bgColors,
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true, font: { family: 'Pretendard' } } }
+        // --- 아이콘 유틸리티 ---
+        const LucideIcons = Object.fromEntries(
+            Object.entries(lucide.icons).map(([key, iconData]) => [
+                key,
+                ({ size = 24, className = "", ...props }) => React.createElement(
+                    'svg',
+                    {
+                        xmlns: "http://www.w3.org/2000/svg",
+                        width: size,
+                        height: size,
+                        viewBox: "0 0 24 24",
+                        fill: "none",
+                        stroke: "currentColor",
+                        strokeWidth: 2,
+                        strokeLinecap: "round",
+                        strokeLinejoin: "round",
+                        className: className,
+                        ...props
                     },
-                    cutout: '65%'
+                    ...iconData.map(([tag, attrs], i) => React.createElement(tag, { ...attrs, key: i }))
+                )
+            ])
+        );
+
+        const { CheckCircle2, Circle, ChevronLeft, ChevronRight, BarChart3, Calendar: CalendarIcon, Trophy, Video, Headphones, BookOpen, Clapperboard, Gamepad2, LayoutDashboard, Book, Plus, Trash2, Edit2, X, Save, AlertCircle, RefreshCw, Cloud, AlertTriangle } = LucideIcons;
+
+        // 공부 항목 정의
+        const STUDY_ITEMS = [
+            { id: 'culips', label: 'Culips', icon: Headphones, color: 'text-blue-500', bg: 'bg-blue-100' },
+            { id: 'duolingo', label: '듀오링고', icon: Gamepad2, color: 'text-green-500', bg: 'bg-green-100' },
+            { id: 'malheboca', label: '말해보카', icon: BookOpen, color: 'text-orange-500', bg: 'bg-orange-100' },
+            { id: 'guseulsaem', label: '구슬샘', icon: Video, color: 'text-red-500', bg: 'bg-red-100' },
+            { id: 'intern', label: '영화 인턴', icon: Clapperboard, color: 'text-purple-500', bg: 'bg-purple-100' },
+        ];
+
+        const formatDate = (date) => {
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        // --- Firebase Hook (No Auth) ---
+        const useFirebase = () => {
+            const [db, setDb] = useState(null);
+            const [isReady, setIsReady] = useState(false);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                const init = async () => {
+                    if (window.firebaseModules) {
+                        try {
+                            const { initializeApp, getFirestore, firebaseConfig } = window.firebaseModules;
+                            
+                            const app = initializeApp(firebaseConfig);
+                            const _db = getFirestore(app);
+                            
+                            setDb(_db);
+                            setIsReady(true);
+                        } catch (e) {
+                            console.error("Firebase init failed:", e);
+                            setError(e.message);
+                            setIsReady(true); 
+                        }
+                    }
+                };
+                
+                const checkModules = setInterval(() => {
+                    if (window.firebaseModules) {
+                        clearInterval(checkModules);
+                        init();
+                    }
+                }, 100);
+                return () => clearInterval(checkModules);
+            }, []);
+
+            return { db, isReady, error };
+        };
+
+        // --- 컴포넌트: 달력 ---
+        const CalendarView = ({ currentDate, onDateChange, selectedDate, notebookData = {}, compact = false }) => {
+            const getMonthDays = () => {
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                
+                const days = [];
+                for(let i=0; i<firstDay.getDay(); i++) days.push(null);
+                for(let i=1; i<=lastDay.getDate(); i++) days.push(new Date(year, month, i));
+                return days;
+            };
+
+            const monthDays = useMemo(() => getMonthDays(), [currentDate]);
+
+            const changeMonth = (val) => {
+                const d = new Date(currentDate);
+                d.setMonth(d.getMonth() + val);
+                onDateChange(d);
+            };
+
+            return (
+                <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${compact ? 'p-3' : 'p-4 md:p-6'}`}>
+                    <div className="flex items-center justify-between mb-4">
+                        <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-gray-50 rounded-full transition"><ChevronLeft size={20} /></button>
+                        <span className="font-bold text-gray-800 text-lg">
+                            {currentDate.getFullYear()}년 {currentDate.getMonth()+1}월
+                        </span>
+                        <button onClick={() => changeMonth(1)} className="p-2 hover:bg-gray-50 rounded-full transition"><ChevronRight size={20} /></button>
+                    </div>
+
+                    <div className="grid grid-cols-7 text-center mb-2">
+                        {['일','월','화','수','목','금','토'].map((d, i) => (
+                            <div key={i} className={`text-xs font-medium py-2 ${i===0 ? 'text-red-500' : 'text-gray-400'}`}>{d}</div>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 md:gap-2">
+                        {monthDays.map((day, idx) => {
+                            if(!day) return <div key={idx} className="aspect-square"></div>;
+                            
+                            const dateStr = formatDate(day);
+                            const isSelected = selectedDate && formatDate(selectedDate) === dateStr;
+                            const isToday = dateStr === formatDate(new Date());
+                            const hasNote = notebookData[dateStr] && notebookData[dateStr].length > 0;
+
+                            return (
+                                <button 
+                                    key={idx} 
+                                    onClick={() => onDateChange(day, true)}
+                                    className={`aspect-square flex flex-col items-center justify-center relative rounded-xl transition-all duration-200
+                                        ${isSelected ? 'bg-indigo-600 text-white shadow-md scale-105' : 'hover:bg-gray-50 text-gray-700'}
+                                        ${isToday && !isSelected ? 'ring-2 ring-indigo-100 text-indigo-600 font-bold' : ''}
+                                    `}
+                                >
+                                    <span className="text-sm">{day.getDate()}</span>
+                                    {hasNote && (
+                                        <div className={`w-1.5 h-1.5 rounded-full mt-1 ${isSelected ? 'bg-white' : 'bg-indigo-500'}`}></div>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 메인 App ---
+        const App = () => {
+            const { db, isReady, error } = useFirebase();
+            const [activeTab, setActiveTab] = useState('scheduler');
+            const [view, setView] = useState('daily');
+            const [currentDate, setCurrentDate] = useState(new Date());
+            const [isLoadingData, setIsLoadingData] = useState(true);
+            const [firebaseError, setFirebaseError] = useState(null); // 파이어베이스 연결 에러
+            
+            // 데이터 상태
+            const [history, setHistory] = useState({});
+            const [notebook, setNotebook] = useState({});
+
+            // 고정된 문서 ID 사용 (로그인 없이 공유)
+            const SHARED_DOC_ID = "shared_study_data";
+
+            // 1. 초기 로드 및 실시간 동기화
+            useEffect(() => {
+                if (!isReady) return;
+
+                if (db) {
+                    setIsLoadingData(true);
+                    setFirebaseError(null);
+                    const { doc, onSnapshot } = window.firebaseModules;
+                    
+                    // minenglish 컬렉션의 shared_study_data 문서를 구독
+                    const unsub = onSnapshot(doc(db, "minenglish", SHARED_DOC_ID), (docSnap) => {
+                        if (docSnap.exists()) {
+                            const data = docSnap.data();
+                            setHistory(data.history || {});
+                            setNotebook(data.notebook || {});
+                        } else {
+                            // 문서가 없으면 초기화
+                            setHistory({});
+                            setNotebook({});
+                        }
+                        setIsLoadingData(false);
+                    }, (err) => {
+                        console.error("Firestore read error:", err);
+                        setIsLoadingData(false);
+                        
+                        // 에러 타입에 따른 메시지 설정
+                        if (err.code === 'permission-denied') {
+                            setFirebaseError({
+                                title: "권한 오류 (Permission Denied)",
+                                message: "파이어베이스 콘솔 > Firestore Database > Rules 탭에서 규칙을 'allow read, write: if true;'로 변경해주세요.",
+                                type: "rules"
+                            });
+                        } else if (err.message.includes("Could not reach Cloud Firestore backend") || err.code === 'unavailable') {
+                             setFirebaseError({
+                                title: "연결 오류 (API Not Enabled)",
+                                message: "파이어베이스 콘솔 > Build > Firestore Database에서 '데이터베이스 만들기'를 완료해주세요.",
+                                type: "api"
+                            });
+                        } else {
+                            setFirebaseError({
+                                title: "오류 발생",
+                                message: err.message,
+                                type: "unknown"
+                            });
+                        }
+                    });
+
+                    return () => unsub();
                 }
-            });
-        }
-        
-        // 초기 실행 시 모드 설정 (UI 초기화)
-        toggleMode('expense');
+            }, [db, isReady]);
+
+            // 2. 데이터 저장 로직
+            const saveData = async (newHistory, newNotebook) => {
+                const nextHistory = newHistory || history;
+                const nextNotebook = newNotebook || notebook;
+
+                // UI 선반영
+                if (newHistory) setHistory(newHistory);
+                if (newNotebook) setNotebook(newNotebook);
+
+                if (db) {
+                    const { doc, setDoc } = window.firebaseModules;
+                    try {
+                        await setDoc(doc(db, "minenglish", SHARED_DOC_ID), {
+                            history: nextHistory,
+                            notebook: nextNotebook,
+                            lastUpdated: new Date().toISOString()
+                        }, { merge: true });
+                    } catch (e) {
+                        console.error("Save failed:", e);
+                        // 쓰기 에러도 표시
+                        if (e.code === 'permission-denied') {
+                             setFirebaseError({
+                                title: "저장 실패 (권한 없음)",
+                                message: "데이터를 저장할 수 없습니다. Firestore 규칙을 확인해주세요.",
+                                type: "rules"
+                            });
+                        }
+                    }
+                }
+            };
+
+            const dateKey = formatDate(currentDate);
+
+            // 스케줄러 토글
+            const toggleItem = (itemId) => {
+                const newData = {
+                    ...history,
+                    [dateKey]: { ...history[dateKey], [itemId]: !history[dateKey]?.[itemId] }
+                };
+                saveData(newData, null);
+            };
+
+            // 노트북 추가/수정/삭제
+            const updateNotebook = (dateStr, newEntries) => {
+                const newNotebook = {
+                    ...notebook,
+                    [dateStr]: newEntries
+                };
+                saveData(null, newNotebook);
+            };
+
+            // 날짜 이동
+            const changeDate = (days) => {
+                const newDate = new Date(currentDate);
+                newDate.setDate(newDate.getDate() + days);
+                setCurrentDate(newDate);
+            };
+
+            const getProgress = (dateStr) => {
+                const data = history[dateStr] || {};
+                const completedCount = STUDY_ITEMS.filter(item => data[item.id]).length;
+                return Math.round((completedCount / STUDY_ITEMS.length) * 100);
+            };
+
+            // --- Error Banner Component ---
+            const ErrorBanner = ({ error }) => {
+                if (!error) return null;
+                return (
+                    <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4 mx-4 md:mx-8 rounded-r-lg shadow-sm">
+                        <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                                <AlertTriangle className="h-5 w-5 text-red-500" />
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-sm font-bold text-red-800">{error.title}</h3>
+                                <div className="mt-1 text-sm text-red-700">
+                                    <p>{error.message}</p>
+                                </div>
+                                {error.type === 'rules' && (
+                                    <div className="mt-2 text-xs bg-red-100 p-2 rounded text-red-900 font-mono">
+                                        match /&#123;document=**&#125; &#123; allow read, write: if true; &#125;
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // --- Views (기존과 동일) ---
+            const DailyView = () => {
+                const progress = getProgress(dateKey);
+                const data = history[dateKey] || {};
+                
+                return (
+                    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-1 space-y-6">
+                                <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                    <button onClick={() => changeDate(-1)} className="p-2 hover:bg-gray-100 rounded-full transition"><ChevronLeft size={24} className="text-gray-500" /></button>
+                                    <div className="text-center">
+                                        <h2 className="text-lg font-bold text-gray-800">
+                                            {currentDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+                                        </h2>
+                                        <p className="text-xs text-gray-500">오늘의 목표를 달성해보세요!</p>
+                                    </div>
+                                    <button onClick={() => changeDate(1)} className="p-2 hover:bg-gray-100 rounded-full transition"><ChevronRight size={24} className="text-gray-500" /></button>
+                                </div>
+
+                                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 h-1 bg-gray-50 w-full">
+                                        <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                                    </div>
+                                    <div className="mt-2">
+                                        <span className="text-5xl font-black text-indigo-600">{progress}%</span>
+                                        <span className="text-gray-400 text-sm ml-1">달성</span>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mt-2">
+                                        {progress === 100 ? "완벽해요! 🎉 오늘은 푹 쉬세요." : 
+                                        progress >= 50 ? "절반 이상 왔어요! 힘내요 🔥" : 
+                                        "영어 고수를 향한 첫걸음! 🌱"}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="lg:col-span-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 h-full content-start">
+                                    {STUDY_ITEMS.map(item => {
+                                        const isDone = !!data[item.id];
+                                        const Icon = item.icon;
+                                        return (
+                                            <div key={item.id} onClick={() => toggleItem(item.id)} className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all duration-200 border-2 hover:-translate-y-0.5 ${isDone ? 'bg-indigo-50 border-indigo-200 shadow-sm' : 'bg-white border-transparent shadow-sm hover:bg-white hover:border-gray-200 hover:shadow-md'}`}>
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`p-3 rounded-xl ${item.bg} ${item.color}`}><Icon size={24} /></div>
+                                                    <span className={`font-semibold text-lg ${isDone ? 'text-gray-800' : 'text-gray-600'}`}>{item.label}</span>
+                                                </div>
+                                                <div className={`transition-transform duration-200 ${isDone ? 'scale-110' : 'scale-100'}`}>
+                                                    {isDone ? <CheckCircle2 size={28} className="text-indigo-500 fill-indigo-100" /> : <Circle size={28} className="text-gray-300" />}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const WeeklyView = () => {
+                const getWeekDays = (date) => {
+                    const d = new Date(date);
+                    const day = d.getDay();
+                    const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+                    const monday = new Date(d.setDate(diff));
+                    const week = [];
+                    for(let i=0; i<7; i++) {
+                        const nextDay = new Date(monday);
+                        nextDay.setDate(monday.getDate() + i);
+                        week.push(nextDay);
+                    }
+                    return week;
+                };
+                const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
+                return (
+                    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
+                        <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
+                            <button onClick={() => changeDate(-7)} className="p-2 hover:bg-gray-100 rounded-full"><ChevronLeft size={20} /></button>
+                            <span className="font-bold text-gray-700 text-lg">{weekDays[0].getMonth()+1}월 {weekDays[0].getDate()}일 - {weekDays[6].getMonth()+1}월 {weekDays[6].getDate()}일</span>
+                            <button onClick={() => changeDate(7)} className="p-2 hover:bg-gray-100 rounded-full"><ChevronRight size={20} /></button>
+                        </div>
+                        <div className="bg-white p-6 md:p-10 rounded-2xl shadow-sm border border-gray-100">
+                            <h3 className="font-bold text-gray-800 mb-8 flex items-center gap-2 text-xl"><BarChart3 size={24} className="text-indigo-500"/> 주간 달성률</h3>
+                            <div className="flex justify-between items-end h-64 gap-2 md:gap-4">
+                                {weekDays.map((day, idx) => {
+                                    const p = getProgress(formatDate(day));
+                                    const isToday = formatDate(day) === formatDate(new Date());
+                                    return (
+                                        <div key={idx} className="flex flex-col items-center gap-3 w-full group">
+                                            <div className="relative w-full flex justify-center h-full items-end">
+                                                <div className={`w-full max-w-[20px] md:max-w-[40px] rounded-t-xl transition-all duration-500 ${isToday ? 'bg-indigo-500' : 'bg-indigo-200 group-hover:bg-indigo-300'}`} style={{ height: `${p}%` }}></div>
+                                                <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 text-sm font-bold bg-gray-800 text-white px-3 py-1 rounded-lg transition-all transform translate-y-2 group-hover:translate-y-0 whitespace-nowrap z-10 pointer-events-none">{p}%</div>
+                                            </div>
+                                            <span className={`text-sm font-bold ${isToday ? 'text-indigo-600' : 'text-gray-400'}`}>{day.toLocaleDateString('ko-KR', { weekday: 'short' }).replace('요일','')}</span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const MonthlyView = () => {
+                return (
+                    <div className="animate-fade-in max-w-3xl mx-auto">
+                        <CalendarView 
+                            currentDate={currentDate} 
+                            onDateChange={(d, isDayClick) => {
+                                setCurrentDate(d);
+                                if(isDayClick) setView('daily');
+                            }}
+                            selectedDate={currentDate}
+                            notebookData={notebook} 
+                        />
+                    </div>
+                );
+            };
+
+            const NotebookView = () => {
+                const [isFormOpen, setIsFormOpen] = useState(false);
+                const [editId, setEditId] = useState(null);
+                const [formData, setFormData] = useState({ source: '', sentence: '', translation: '', note: '' });
+                const [deleteTargetId, setDeleteTargetId] = useState(null);
+                const [validationError, setValidationError] = useState('');
+
+                const dateStr = formatDate(currentDate);
+                const dayEntries = notebook[dateStr] || [];
+
+                const handleSave = () => {
+                    if (!formData.sentence.trim()) {
+                        setValidationError('영어 문장을 입력해주세요!');
+                        return;
+                    }
+                    const newItem = { id: editId || Date.now(), ...formData };
+                    
+                    let newList;
+                    if (editId) {
+                        newList = dayEntries.map(item => item.id === editId ? newItem : item);
+                    } else {
+                        newList = [...dayEntries, newItem];
+                    }
+                    updateNotebook(dateStr, newList);
+                    resetForm();
+                };
+
+                const resetForm = () => {
+                    setFormData({ source: '', sentence: '', translation: '', note: '' });
+                    setValidationError('');
+                    setEditId(null);
+                    setIsFormOpen(false);
+                };
+
+                const handleEdit = (item) => {
+                    setFormData({ source: item.source, sentence: item.sentence, translation: item.translation, note: item.note });
+                    setValidationError('');
+                    setEditId(item.id);
+                    setIsFormOpen(true);
+                };
+
+                const confirmDelete = () => {
+                    if (deleteTargetId) {
+                        const newList = dayEntries.filter(item => item.id !== deleteTargetId);
+                        updateNotebook(dateStr, newList);
+                        setDeleteTargetId(null);
+                    }
+                };
+
+                return (
+                    <div className="h-full flex flex-col md:flex-row gap-6 animate-fade-in pb-20 md:pb-0">
+                        <div className="md:w-1/3 lg:w-1/4 flex flex-col gap-4">
+                            <CalendarView 
+                                currentDate={currentDate} 
+                                onDateChange={(d) => setCurrentDate(d)} 
+                                selectedDate={currentDate}
+                                notebookData={notebook}
+                            />
+                            <div className="hidden md:block bg-indigo-50 p-5 rounded-2xl text-indigo-900">
+                                <h4 className="font-bold mb-2 flex items-center gap-2"><BookOpen size={18}/> 학습 현황</h4>
+                                <p className="text-sm">이번 달 총 <span className="font-bold text-xl text-indigo-600">
+                                    {Object.keys(notebook).filter(k => k.startsWith(formatDate(currentDate).substring(0,7))).reduce((acc, k) => acc + notebook[k].length, 0)}
+                                </span>개의 문장을 기록했어요.</p>
+                            </div>
+                        </div>
+
+                        <div className="md:flex-1 flex flex-col h-full overflow-hidden">
+                            <div className="flex items-center justify-between mb-4 px-1">
+                                <h3 className="font-bold text-gray-800 text-xl flex items-center gap-2">
+                                    <span className="hidden md:inline text-indigo-500"><CalendarIcon size={24}/></span>
+                                    {currentDate.getMonth()+1}월 {currentDate.getDate()}일의 기록
+                                    <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{dayEntries.length}</span>
+                                </h3>
+                                <button 
+                                    onClick={() => { setIsFormOpen(true); setEditId(null); setValidationError(''); setFormData({source:'', sentence:'', translation:'', note:''}); }}
+                                    className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-indigo-700 hover:shadow-lg transition transform active:scale-95"
+                                >
+                                    <Plus size={18} /> <span className="hidden md:inline">새 기록 작성</span><span className="md:hidden">기록</span>
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-24 md:pb-4">
+                                {dayEntries.length === 0 ? (
+                                    <div className="h-64 flex flex-col items-center justify-center text-center text-gray-400 bg-white rounded-2xl border-2 border-dashed border-gray-200">
+                                        <Book size={48} className="mb-4 text-gray-200"/>
+                                        <p>아직 기록된 문장이 없습니다.</p>
+                                        <p className="text-sm mt-1">오늘 배운 표현을 기록해보세요! 📝</p>
+                                    </div>
+                                ) : (
+                                    dayEntries.map((item, index) => (
+                                        <div key={item.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex gap-4 relative group hover:shadow-md transition-shadow">
+                                            <div className="flex-shrink-0">
+                                                <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                                                    {index + 1}
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 space-y-2">
+                                                {item.source && <div className="inline-block bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded-md font-medium">{item.source}</div>}
+                                                <p className="text-xl font-bold text-gray-800 leading-snug break-keep">{item.sentence}</p>
+                                                {item.translation && <p className="text-gray-600 break-keep">{item.translation}</p>}
+                                                {item.note && <div className="bg-yellow-50 p-3 rounded-xl mt-3 text-sm text-yellow-800 border border-yellow-100"><span className="font-bold mr-1">💡 Note:</span> {item.note}</div>}
+                                            </div>
+                                            <div className="flex flex-col gap-2 ml-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => handleEdit(item)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><Edit2 size={18} /></button>
+                                                <button onClick={() => setDeleteTargetId(item.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 size={18} /></button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 입력 모달 */}
+                        {isFormOpen && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                                <div className="absolute inset-0 bg-black/40 modal-overlay backdrop-blur-sm" onClick={resetForm}></div>
+                                <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl relative z-10 modal-content">
+                                    <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                                        <h3 className="text-xl font-bold text-gray-800">{editId ? '기록 수정' : '새로운 기록 작성'}</h3>
+                                        <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 bg-gray-100 p-1 rounded-full"><X size={20}/></button>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-500 mb-1 block">출처</label>
+                                            <input type="text" placeholder="예: 영화 인턴, 뉴스 기사" className="w-full p-3 bg-gray-50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-200 transition" value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-500 mb-1 block">영어 문장 <span className="text-red-500">*</span></label>
+                                            <textarea placeholder="Write down the sentence here..." className={`w-full p-3 bg-gray-50 rounded-xl text-lg font-medium outline-none focus:ring-2 focus:ring-indigo-200 h-24 resize-none transition ${validationError ? 'border-2 border-red-200 bg-red-50' : ''}`} value={formData.sentence} onChange={e => { setFormData({...formData, sentence: e.target.value}); if(e.target.value.trim()) setValidationError(''); }} />
+                                            {validationError && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle size={12}/> {validationError}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-500 mb-1 block">해석</label>
+                                            <input type="text" placeholder="한국어 해석" className="w-full p-3 bg-gray-50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-200 transition" value={formData.translation} onChange={e => setFormData({...formData, translation: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-500 mb-1 block">노트</label>
+                                            <textarea placeholder="문법 포인트, 발음, 뉘앙스 등 메모" className="w-full p-3 bg-gray-50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-200 h-20 resize-none transition" value={formData.note} onChange={e => setFormData({...formData, note: e.target.value})} />
+                                        </div>
+                                        <button onClick={handleSave} className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold mt-2 hover:bg-indigo-700 transition shadow-md flex justify-center items-center gap-2 text-lg">
+                                            <Save size={20} /> 저장하기
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 삭제 확인 모달 */}
+                        {deleteTargetId && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                                <div className="absolute inset-0 bg-black/40 modal-overlay backdrop-blur-sm" onClick={() => setDeleteTargetId(null)}></div>
+                                <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl relative z-10 modal-content text-center">
+                                    <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <Trash2 size={28} className="text-red-500" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-900 mb-2">삭제하시겠습니까?</h3>
+                                    <p className="text-sm text-gray-500 mb-6">이 작업은 되돌릴 수 없습니다.</p>
+                                    <div className="flex gap-3">
+                                        <button onClick={() => setDeleteTargetId(null)} className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition">취소</button>
+                                        <button onClick={confirmDelete} className="flex-1 py-3 text-sm font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 transition shadow-md">삭제</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            };
+
+            // 로딩 화면
+            if (!isReady) {
+                return <div className="flex items-center justify-center h-screen bg-gray-50 text-gray-500">앱을 불러오는 중...</div>;
+            }
+
+            return (
+                <div className="w-full h-screen bg-gray-50 flex flex-col md:flex-row text-gray-800 overflow-hidden">
+                    
+                    {/* [Desktop] Sidebar */}
+                    <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 p-6 shadow-sm z-20">
+                        <div className="flex items-center gap-3 mb-10 px-2">
+                            <div className="bg-indigo-600 p-2 rounded-xl text-white"><Trophy size={24} /></div>
+                            <div><h1 className="text-xl font-black text-gray-900 tracking-tight">Min<br/>English</h1></div>
+                        </div>
+
+                        <nav className="flex-1 space-y-2">
+                            <button onClick={() => setActiveTab('scheduler')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'scheduler' ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}>
+                                <LayoutDashboard size={20} /> 스케줄러
+                            </button>
+                            <button onClick={() => setActiveTab('notebook')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === 'notebook' ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}>
+                                <Book size={20} /> 학습장
+                            </button>
+                        </nav>
+                        
+                        {/* Sync Status Info */}
+                        <div className="mt-auto pt-4 border-t border-gray-100 text-center">
+                            <div className="flex items-center justify-center gap-2 text-indigo-600 text-xs font-bold bg-indigo-50 py-2 rounded-lg">
+                                <Cloud size={14}/> 자동 동기화 활성
+                            </div>
+                            <p className="text-[10px] text-gray-400 mt-2">
+                                별도 로그인 없이 접속 시 자동 저장됩니다.<br/>
+                                (공용 공간 사용 중)
+                            </p>
+                        </div>
+                    </aside>
+
+                    {/* Main Content Area */}
+                    <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+                        {/* [Mobile] Header */}
+                        <header className="md:hidden bg-white p-4 sticky top-0 z-20 border-b border-gray-100 flex justify-between items-center shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <div>
+                                    <h1 className="text-xl font-black text-gray-800 tracking-tight">{activeTab === 'scheduler' ? 'MinEnglish' : 'Notebook'}</h1>
+                                    <p className="text-[10px] text-green-600 flex items-center gap-1 font-bold">
+                                        <Cloud size={10}/> 동기화 됨
+                                    </p>
+                                </div>
+                            </div>
+                        </header>
+
+                        {/* [Desktop] Header */}
+                        <header className="hidden md:flex bg-white/80 backdrop-blur-md px-8 py-4 border-b border-gray-200 justify-between items-center sticky top-0 z-10">
+                            <h2 className="text-2xl font-bold text-gray-900">{activeTab === 'scheduler' ? 'Daily Scheduler' : 'My Study Notebook'}</h2>
+                            {activeTab === 'scheduler' && (
+                                <div className="flex bg-gray-100 p-1 rounded-lg">
+                                    <button onClick={() => setView('daily')} className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all ${view === 'daily' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>일간</button>
+                                    <button onClick={() => setView('weekly')} className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all ${view === 'weekly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>주간</button>
+                                    <button onClick={() => setView('monthly')} className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all ${view === 'monthly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>월간</button>
+                                </div>
+                            )}
+                        </header>
+                        
+                        {/* [Mobile] Sub-tabs */}
+                        {activeTab === 'scheduler' && (
+                            <div className="md:hidden bg-white px-5 pb-3 border-b border-gray-100">
+                                <div className="flex bg-gray-100 p-1 rounded-xl">
+                                    <button onClick={() => setView('daily')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${view === 'daily' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500'}`}>일간</button>
+                                    <button onClick={() => setView('weekly')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${view === 'weekly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500'}`}>주간</button>
+                                    <button onClick={() => setView('monthly')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${view === 'monthly' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500'}`}>월간</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* View Area */}
+                        <div className="flex-1 overflow-y-auto p-4 md:p-8">
+                             {/* Error Banner 표시 */}
+                            {firebaseError && <ErrorBanner error={firebaseError} />}
+
+                            {isLoadingData ? (
+                                <div className="h-full flex items-center justify-center text-gray-400 gap-2">
+                                    <RefreshCw className="animate-spin" size={20}/> 동기화 중...
+                                </div>
+                            ) : (
+                                activeTab === 'scheduler' ? (
+                                    <>
+                                        {view === 'daily' && <DailyView />}
+                                        {view === 'weekly' && <WeeklyView />}
+                                        {view === 'monthly' && <MonthlyView />}
+                                    </>
+                                ) : (
+                                    <NotebookView />
+                                )
+                            )}
+                        </div>
+
+                        {/* [Mobile] Bottom Navigation */}
+                        <nav className="md:hidden bg-white border-t border-gray-100 px-6 py-3 pb-6 flex justify-around items-center z-20 shadow-[0_-5px_10px_rgba(0,0,0,0.02)]">
+                            <button onClick={() => setActiveTab('scheduler')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-20 ${activeTab === 'scheduler' ? 'text-indigo-600' : 'text-gray-400'}`}>
+                                <LayoutDashboard size={24} strokeWidth={activeTab === 'scheduler' ? 2.5 : 2} />
+                                <span className="text-[10px] font-bold">스케줄러</span>
+                            </button>
+                            <button onClick={() => setActiveTab('notebook')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-20 ${activeTab === 'notebook' ? 'text-indigo-600' : 'text-gray-400'}`}>
+                                <Book size={24} strokeWidth={activeTab === 'notebook' ? 2.5 : 2} />
+                                <span className="text-[10px] font-bold">학습장</span>
+                            </button>
+                        </nav>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
-
 </html>
