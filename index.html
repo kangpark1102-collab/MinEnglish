@@ -18,6 +18,12 @@
     <!-- Lucide Icons (Vanilla) -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
+    <!-- Excel Export (SheetJS) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- PDF Export (html2pdf.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <!-- Firebase SDK (Version 9 - Modular) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -98,7 +104,7 @@
             ])
         );
 
-        const { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, BarChart3, Calendar: CalendarIcon, Trophy, Video, Headphones, BookOpen, Clapperboard, Gamepad2, LayoutDashboard, Book, Plus, Trash2, Edit2, X, Save, AlertCircle, RefreshCw, Cloud, AlertTriangle, MoreVertical, Settings } = LucideIcons;
+        const { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, BarChart3, Calendar: CalendarIcon, Trophy, Video, Headphones, BookOpen, Clapperboard, Gamepad2, LayoutDashboard, Book, Plus, Trash2, Edit2, X, Save, AlertCircle, RefreshCw, Cloud, AlertTriangle, MoreVertical, Settings, FileSpreadsheet, FileText, GraduationCap } = LucideIcons;
 
         // 기본 공부 항목 (초기값)
         const DEFAULT_STUDY_ITEMS = [
@@ -627,6 +633,7 @@
                 const [deleteTargetId, setDeleteTargetId] = useState(null);
                 const [validationError, setValidationError] = useState('');
                 const [isCalendarOpen, setIsCalendarOpen] = useState(false); // 캘린더 모달 상태
+                const [isStudyMode, setIsStudyMode] = useState(false); // 학습 모드 상태
 
                 const dateStr = formatDate(currentDate);
                 const dayEntries = notebook[dateStr] || [];
@@ -670,9 +677,105 @@
                     }
                 };
 
-                return (
-                    <div className="h-full flex flex-col gap-4 animate-fade-in pb-20 md:pb-0 relative">
+                // --------------------------------------------------------------------------------
+                // Export Functions
+                // --------------------------------------------------------------------------------
+                
+                const handleExportExcel = () => {
+                    if (dayEntries.length === 0) {
+                        alert("내보낼 데이터가 없습니다.");
+                        return;
+                    }
+                    
+                    const excelData = dayEntries.map((item, idx) => ({
+                        'No': idx + 1,
+                        '출처': item.source || '',
+                        '영어 문장': item.sentence,
+                        '해석': item.translation || '',
+                        '노트': item.note || ''
+                    }));
+
+                    const ws = XLSX.utils.json_to_sheet(excelData);
+                    
+                    // Column Widths
+                    ws['!cols'] = [
+                        { wch: 5 },  // No
+                        { wch: 15 }, // 출처
+                        { wch: 50 }, // 영어 문장
+                        { wch: 40 }, // 해석
+                        { wch: 30 }  // 노트
+                    ];
+
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "학습기록");
+                    
+                    const fileName = `MinEnglish_${formatDate(currentDate)}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+                };
+
+                const handleExportPDF = () => {
+                    if (dayEntries.length === 0) {
+                        alert("내보낼 데이터가 없습니다.");
+                        return;
+                    }
+
+                    // PDF 생성을 위한 임시 HTML 엘리먼트 생성
+                    const content = document.createElement('div');
+                    content.style.padding = '40px';
+                    content.style.fontFamily = 'Pretendard, sans-serif';
+                    content.style.color = '#333';
+                    
+                    // 타이틀
+                    const title = document.createElement('h1');
+                    title.textContent = `${currentDate.getFullYear()}년 ${currentDate.getMonth()+1}월 ${currentDate.getDate()}일 학습 기록`;
+                    title.style.textAlign = 'center';
+                    title.style.fontSize = '24px';
+                    title.style.fontWeight = 'bold';
+                    title.style.marginBottom = '30px';
+                    title.style.borderBottom = '2px solid #4f46e5';
+                    title.style.paddingBottom = '10px';
+                    content.appendChild(title);
+
+                    // 리스트 아이템
+                    dayEntries.forEach((item, index) => {
+                        const row = document.createElement('div');
+                        row.style.marginBottom = '20px';
+                        row.style.borderBottom = '1px solid #eee';
+                        row.style.paddingBottom = '15px';
                         
+                        let html = `
+                            <div style="font-size: 14px; color: #666; margin-bottom: 6px; display: flex; align-items: center;">
+                                <span style="background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 4px; font-weight: bold; margin-right: 8px;">No.${index + 1}</span>
+                                ${item.source ? `<span style="background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${item.source}</span>` : ''}
+                            </div>
+                            <div style="font-size: 18px; font-weight: bold; margin-bottom: 6px; line-height: 1.4;">${item.sentence}</div>
+                        `;
+                        
+                        if (item.translation) {
+                            html += `<div style="font-size: 15px; color: #555; margin-bottom: 6px;">${item.translation}</div>`;
+                        }
+                        
+                        if (item.note) {
+                            html += `<div style="font-size: 13px; color: #854d0e; background: #fef9c3; padding: 8px 12px; border-radius: 8px; margin-top: 6px;">💡 ${item.note}</div>`;
+                        }
+
+                        row.innerHTML = html;
+                        content.appendChild(row);
+                    });
+
+                    const opt = {
+                        margin: 10,
+                        filename: `MinEnglish_${formatDate(currentDate)}.pdf`,
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true, logging: false },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    };
+
+                    html2pdf().set(opt).from(content).save();
+                };
+
+                return (
+                    <div className="h-full flex flex-col gap-4 animate-fade-in relative">
                         {/* 상단 날짜 선택 헤더 (달력 모달 트리거) */}
                         <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex-shrink-0">
                             <button onClick={() => changeDate(-1)} className="p-2 hover:bg-gray-50 rounded-full transition"><ChevronLeft size={20} /></button>
@@ -686,16 +789,36 @@
 
                         {/* 리스트 영역 (최대 높이 확보) */}
                         <div className="flex-1 flex flex-col min-h-0">
-                            <div className="flex items-center justify-between mb-3 px-1 flex-shrink-0">
-                                <span className="text-sm font-bold text-gray-500">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-3 px-1 gap-2 flex-shrink-0">
+                                <span className="text-sm font-bold text-gray-500 hidden md:inline">
                                     총 <span className="text-indigo-600">{dayEntries.length}</span>개의 기록
                                 </span>
-                                <button 
-                                    onClick={() => { setIsFormOpen(true); setEditId(null); setValidationError(''); setFormData({source:'', sentence:'', translation:'', note:''}); }}
-                                    className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-indigo-700 hover:shadow-lg transition transform active:scale-95"
-                                >
-                                    <Plus size={18} /> 새 기록 작성
-                                </button>
+                                
+                                <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                                    {/* Export Buttons */}
+                                    <div className="flex gap-1 mr-2">
+                                        <button onClick={handleExportExcel} className="p-2 bg-green-50 text-green-700 rounded-xl hover:bg-green-100 transition border border-green-100 shadow-sm" title="Excel로 저장">
+                                            <FileSpreadsheet size={18} />
+                                        </button>
+                                        <button onClick={handleExportPDF} className="p-2 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition border border-red-100 shadow-sm" title="PDF로 저장">
+                                            <FileText size={18} />
+                                        </button>
+                                    </div>
+
+                                    <button 
+                                        onClick={() => setIsStudyMode(!isStudyMode)}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-md transition transform active:scale-95 whitespace-nowrap border ${isStudyMode ? 'bg-orange-500 text-white border-orange-500 hover:bg-orange-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                                    >
+                                        <GraduationCap size={18} /> {isStudyMode ? '학습 종료' : '학습 모드'}
+                                    </button>
+
+                                    <button 
+                                        onClick={() => { setIsFormOpen(true); setEditId(null); setValidationError(''); setFormData({source:'', sentence:'', translation:'', note:''}); }}
+                                        className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-indigo-700 hover:shadow-lg transition transform active:scale-95 whitespace-nowrap"
+                                    >
+                                        <Plus size={18} /> <span className="hidden md:inline">새 기록</span><span className="md:hidden">기록</span>
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-4">
@@ -715,7 +838,16 @@
                                             </div>
                                             <div className="flex-1 space-y-1.5">
                                                 {item.source && <div className="inline-block bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-medium">{item.source}</div>}
-                                                <p className="text-lg font-bold text-gray-800 leading-snug break-keep">{item.sentence}</p>
+                                                
+                                                {/* Study Mode: 영어 문장 흐리게 처리 */}
+                                                <div 
+                                                    className={`text-lg font-bold text-gray-800 leading-snug break-keep transition-all duration-300 ${isStudyMode ? 'bg-gray-200 text-transparent rounded select-none cursor-pointer hover:bg-transparent hover:text-gray-800' : ''}`}
+                                                    onClick={() => isStudyMode && alert(item.sentence)}
+                                                    title={isStudyMode ? "클릭해서 확인하기" : ""}
+                                                >
+                                                    {item.sentence}
+                                                </div>
+
                                                 {item.translation && <p className="text-sm text-gray-600 break-keep">{item.translation}</p>}
                                                 {item.note && <div className="bg-yellow-50 p-2.5 rounded-lg mt-2 text-xs text-yellow-800 border border-yellow-100"><span className="font-bold mr-1">💡 Note:</span> {item.note}</div>}
                                             </div>
