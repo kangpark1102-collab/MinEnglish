@@ -886,16 +886,16 @@
                             </div>
                         )}
 
-                        {/* 입력 모달 (기존 동일) */}
+                        {/* 입력 모달 (수정됨: 모바일 대응 스크롤 추가) */}
                         {isFormOpen && (
                             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                                 <div className="absolute inset-0 bg-black/40 modal-overlay backdrop-blur-sm" onClick={resetForm}></div>
-                                <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl relative z-10 modal-content">
-                                    <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                                <div className="bg-white rounded-2xl p-5 md:p-6 w-full max-w-lg shadow-2xl relative z-10 modal-content max-h-[85vh] overflow-y-auto">
+                                    <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4 sticky top-0 bg-white z-10">
                                         <h3 className="text-xl font-bold text-gray-800">{editId ? '기록 수정' : '새로운 기록 작성'}</h3>
                                         <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 bg-gray-100 p-1 rounded-full"><X size={20}/></button>
                                     </div>
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 pb-2">
                                         <div>
                                             <label className="text-xs font-bold text-gray-500 mb-1 block">출처</label>
                                             <input type="text" placeholder="예: 영화 인턴, 뉴스 기사" className="w-full p-3 bg-gray-50 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-200 transition" value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})} />
