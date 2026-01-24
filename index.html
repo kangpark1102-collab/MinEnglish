@@ -401,18 +401,20 @@
             );
         };
 
-        // Rival Card (개선됨: 가독성, 숫자 강조, 소민님 로직)
+        // Rival Card (개선됨: 가독성, 숫자 강조, 2줄 처리)
         const RivalCard = ({ myCount, rivalCount, rivalName, isSomin }) => {
-            let content = null;
             let color = "bg-blue-50 text-blue-700 border-blue-100";
             let icon = <Zap size={16} />;
+            let line1 = "";
+            let line2 = null;
 
             if (isSomin) {
                  color = "bg-pink-50 text-pink-700 border-pink-100";
                  icon = <Sparkles size={16} className="text-pink-500 fill-pink-200" />;
-                 content = (
+                 line1 = "이번 주도 꾸준히 성장 중! 🌸";
+                 line2 = (
                     <span>
-                        이번 주 함께 <span className="font-black text-base text-pink-600 underline decoration-pink-300 decoration-2 underline-offset-2">{myCount}문장</span>을 공부 중이에요! 🌸
+                        함께 <span className="font-black text-lg text-pink-600 underline decoration-pink-300 decoration-2 underline-offset-2">{myCount}문장</span>을 공부 중이에요.
                     </span>
                  );
             } else {
@@ -420,35 +422,39 @@
                 if (diff > 0) {
                     color = "bg-indigo-50 text-indigo-700 border-indigo-100";
                     icon = <Flame size={16} className="text-indigo-500 fill-indigo-200" />;
-                    content = (
+                    line1 = "이번 주 🔥 질주중!";
+                    line2 = (
                         <span>
-                            이번 주 🔥 질주 중! {rivalName}님보다 <span className="font-black text-base text-indigo-600">{diff}문장</span> 앞서고 있어요!
+                            {rivalName}님보다 <span className="font-black text-lg text-indigo-600">{diff}문장</span> 앞서요!
                         </span>
                     );
                 } else if (diff < 0) {
                     color = "bg-orange-50 text-orange-800 border-orange-100";
                     icon = <AlertTriangle size={16} className="text-orange-500" />;
-                    content = (
+                    line1 = "이번 주 ⚡ 분발필요!";
+                    line2 = (
                         <span>
-                            이번 주 ⚡ 분발하세요! {rivalName}님이 <span className="font-black text-base text-orange-600">{Math.abs(diff)}문장</span> 더 공부했어요!
+                            {rivalName}님이 <span className="font-black text-lg text-orange-600">{Math.abs(diff)}문장</span> 더 했어요.
                         </span>
                     );
                 } else {
                     color = "bg-purple-50 text-purple-700 border-purple-100";
                     icon = <Trophy size={16} className="text-purple-500" />;
-                    content = (
+                    line1 = `이번 주 ✨ ${rivalName}님과 막상막하!`;
+                    line2 = (
                         <span>
-                            이번 주 ✨ {rivalName}님과 막상막하! <span className="font-black text-base text-purple-600">{myCount}문장</span> 동률입니다.
+                            <span className="font-black text-lg text-purple-600">{myCount}문장</span>으로 동률입니다.
                         </span>
                     );
                 }
             }
 
             return (
-                <div className={`text-xs font-bold px-4 py-3 rounded-xl border ${color} flex items-center gap-3 shadow-sm animate-fade-in mb-3 mx-1`}>
-                    <div className="shrink-0 p-1 bg-white/50 rounded-full shadow-sm">{icon}</div>
-                    <div className="flex-1 leading-relaxed">
-                        {content}
+                <div className={`px-4 py-3 rounded-xl border ${color} flex items-start gap-3 shadow-sm animate-fade-in mb-3 mx-1`}>
+                    <div className="shrink-0 p-1.5 bg-white/60 rounded-full shadow-sm mt-0.5">{icon}</div>
+                    <div className="flex-1 flex flex-col justify-center">
+                        <div className="text-xs font-bold opacity-80 mb-0.5">{line1}</div>
+                        <div className="text-sm font-bold leading-tight">{line2}</div>
                     </div>
                 </div>
             );
