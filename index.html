@@ -18,8 +18,8 @@
     <!-- Lucide Icons (Vanilla) -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Excel Export/Import (SheetJS) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Excel Export/Import (SheetJS with Style Support) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
     
     <!-- PDF Export (html2pdf.js) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -246,7 +246,7 @@
         };
 
         // --- 컴포넌트: 달력 ---
-        const CalendarView = ({ currentDate, onDateChange, selectedDate, notebookData = {}, historyData = {}, studyItems = [], compact = false }) => {
+        const CalendarView = ({ currentDate, onDateChange, selectedDate, notebookData = {}, historyData = {}, studyItems = [], compact = false, rangeStart = null, rangeEnd = null }) => {
             const getMonthDays = () => {
                 const year = currentDate.getFullYear();
                 const month = currentDate.getMonth();
@@ -265,7 +265,7 @@
             const changeMonth = (val) => {
                 const d = new Date(currentDate);
                 d.setMonth(d.getMonth() + val);
-                onDateChange(d, false); // isDayClick = false
+                onDateChange(d, false); // isDayClick = false (월 변경 시에는 창을 닫지 않음)
             };
 
             // 일별 달성률 계산 함수
@@ -283,6 +283,21 @@
                 if (progress < 50) return 'bg-orange-100 text-orange-700 hover:bg-orange-200';
                 if (progress < 100) return 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200';
                 return 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200';
+            };
+
+            // 범위 확인 함수
+            const isInRange = (date) => {
+                if (!rangeStart || !rangeEnd || !date) return false;
+                const d = date.getTime();
+                const s = rangeStart.getTime();
+                const e = rangeEnd.getTime();
+                return d >= s && d <= e;
+            };
+
+            const isRangeEdge = (date) => {
+                if (!date) return false;
+                const dStr = formatDate(date);
+                return (rangeStart && formatDate(rangeStart) === dStr) || (rangeEnd && formatDate(rangeEnd) === dStr);
             };
 
             return (
@@ -309,20 +324,32 @@
                             const isToday = dateStr === todayStr;
                             const hasNote = notebookData[dateStr] && notebookData[dateStr].length > 0;
                             const progress = getDailyProgress(dateStr);
-                            const colorClass = getDayColorClass(dateStr, progress);
+                            
+                            // 범위 선택 로직 우선 적용
+                            const inRange = isInRange(day);
+                            const edge = isRangeEdge(day);
+                            
+                            let buttonClass = '';
+                            if (edge) {
+                                buttonClass = 'bg-pink-500 text-white font-bold shadow-md transform scale-105 z-20';
+                            } else if (inRange) {
+                                buttonClass = 'bg-pink-100 text-pink-700 font-medium z-10';
+                            } else {
+                                buttonClass = getDayColorClass(dateStr, progress);
+                            }
 
                             return (
                                 <button 
                                     key={idx} 
                                     onClick={() => onDateChange(day, true)}
                                     className={`aspect-square flex flex-col items-center justify-center relative rounded-xl transition-all duration-200
-                                        ${colorClass}
-                                        ${isSelected ? 'ring-2 ring-pink-500 ring-offset-2 z-10' : ''}
-                                        ${isToday && !isSelected ? 'font-black ring-1 ring-inset ring-gray-300' : ''}
+                                        ${buttonClass}
+                                        ${isSelected && !edge && !inRange ? 'ring-2 ring-pink-500 ring-offset-2 z-10' : ''}
+                                        ${isToday && !edge && !inRange ? 'font-black ring-1 ring-inset ring-gray-300' : ''}
                                     `}
                                 >
-                                    <span className="text-sm font-medium">{day.getDate()}</span>
-                                    {hasNote && (
+                                    <span className="text-sm">{day.getDate()}</span>
+                                    {hasNote && !edge && !inRange && (
                                         <div className={`w-1.5 h-1.5 rounded-full absolute bottom-1.5 ${progress >= 50 ? 'bg-indigo-600' : 'bg-indigo-400'}`}></div>
                                     )}
                                 </button>
@@ -694,7 +721,7 @@
 
             const MonthlyView = () => {
                 return (
-                    <div className="animate-fade-in max-w-3xl mx-auto">
+                    <div className="animate-fade-in max-w-3xl mx-auto space-y-4">
                         <CalendarView 
                             currentDate={currentDate} 
                             onDateChange={(d, isDayClick) => {
@@ -706,6 +733,26 @@
                             historyData={history}
                             studyItems={studyItems}
                         />
+                        
+                        {/* 달성률 범례 (Legend) */}
+                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-wrap justify-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-rose-100 border border-rose-200"></div>
+                                <span className="text-xs text-gray-500">20% 미만</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-orange-100 border border-orange-200"></div>
+                                <span className="text-xs text-gray-500">50% 미만</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-yellow-100 border border-yellow-200"></div>
+                                <span className="text-xs text-gray-500">100% 미만</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-emerald-100 border border-emerald-200"></div>
+                                <span className="text-xs text-gray-500">100% 달성</span>
+                            </div>
+                        </div>
                     </div>
                 );
             };
@@ -723,6 +770,7 @@
                 // 날짜 범위 상태 (단일 날짜 선택 시 start === end)
                 const [dateRange, setDateRange] = useState({ start: new Date(), end: new Date() });
                 const [tempRange, setTempRange] = useState({ start: new Date(), end: new Date() }); // 모달용 임시 상태
+                const [rangeSelectionStep, setRangeSelectionStep] = useState('start'); // 'start' or 'end'
 
                 const fileInputRef = useRef(null);
 
@@ -810,13 +858,27 @@
                     setIsCalendarOpen(false);
                 };
 
-                const applyDateRange = () => {
-                    // 시작일이 종료일보다 늦으면 스왑
-                    let s = tempRange.start;
-                    let e = tempRange.end;
-                    if (s > e) { [s, e] = [e, s]; }
-                    setDateRange({ start: s, end: e });
-                    setIsCalendarOpen(false);
+                // 기간 선택 로직
+                const handleRangeSelect = (date, isDayClick) => {
+                    if (!isDayClick) {
+                        setCurrentDate(date); // 월 이동만 수행
+                        return;
+                    }
+
+                    if (rangeSelectionStep === 'start') {
+                        setTempRange({ start: date, end: date }); // 시작일 선택 시 end도 start로 초기화 (UI상 점 하나)
+                        setRangeSelectionStep('end');
+                    } else {
+                        // 종료일 선택
+                        let start = tempRange.start;
+                        let end = date;
+                        if (start > end) { [start, end] = [end, start]; } // 순서 자동 정렬
+                        setTempRange({ start, end });
+                        // 선택 완료 처리 (자동 닫기)
+                        setDateRange({ start, end });
+                        setIsCalendarOpen(false);
+                        setRangeSelectionStep('start'); // 리셋
+                    }
                 };
 
                 // --- Excel Upload ---
@@ -875,7 +937,6 @@
                         return;
                     }
                     
-                    // Flatten all displayed entries
                     const allItems = displayedEntries.flatMap(group => group.items);
                     
                     const excelData = allItems.map((item, idx) => ({
@@ -887,6 +948,27 @@
                     }));
 
                     const ws = XLSX.utils.json_to_sheet(excelData);
+                    
+                    // Auto wrap style for all cells
+                    const range = XLSX.utils.decode_range(ws['!ref']);
+                    for (let R = range.s.r; R <= range.e.r; ++R) {
+                        for (let C = range.s.c; C <= range.e.c; ++C) {
+                            const cell_address = { c: C, r: R };
+                            const cell_ref = XLSX.utils.encode_cell(cell_address);
+                            
+                            if (!ws[cell_ref]) continue;
+                            
+                            // Initialize styling if not present
+                            if (!ws[cell_ref].s) ws[cell_ref].s = {};
+                            if (!ws[cell_ref].s.alignment) ws[cell_ref].s.alignment = {};
+                            
+                            // Enable wrap text and align top-left for better readability
+                            ws[cell_ref].s.alignment.wrapText = true;
+                            ws[cell_ref].s.alignment.vertical = 'top';
+                            ws[cell_ref].s.alignment.horizontal = 'left';
+                        }
+                    }
+
                     ws['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 50 }, { wch: 40 }, { wch: 30 }];
                     const wb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(wb, ws, "학습기록");
@@ -966,31 +1048,18 @@
 
                 return (
                     <div className="h-full flex flex-col gap-4 animate-fade-in relative">
-                        {/* 상단 날짜 선택 헤더 (모바일 최적화) */}
-                        <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex-shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                            
-                            {/* Date Display - Centered on Mobile */}
-                            <button onClick={() => { setTempRange(dateRange); setIsCalendarOpen(true); }} className="flex items-center justify-center gap-2 font-bold text-base md:text-lg text-gray-800 hover:bg-gray-50 px-3 py-2 rounded-lg transition border border-gray-100 md:border-transparent w-full md:w-auto order-1 md:order-2">
-                                <CalendarIcon size={18} className="text-pink-500"/>
+                        {/* 상단 날짜 선택 헤더 (간소화됨) */}
+                        <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex-shrink-0 flex items-center justify-center">
+                            {/* Date Display (Opens Calendar) */}
+                            <button onClick={() => { setTempRange(dateRange); setRangeSelectionStep('start'); setIsCalendarOpen(true); }} className="flex items-center justify-center gap-2 font-bold text-lg md:text-xl text-gray-800 hover:bg-gray-50 px-4 py-2 rounded-xl transition w-full">
+                                <CalendarIcon size={20} className="text-pink-500"/>
                                 {isRangeMode ? (
                                     <span>{formatDate(dateRange.start).slice(5)} ~ {formatDate(dateRange.end).slice(5)}</span>
                                 ) : (
-                                    <span>{dateRange.start.getFullYear()}.{dateRange.start.getMonth()+1}.{dateRange.start.getDate()}</span>
+                                    <span>{dateRange.start.getFullYear()}년 {dateRange.start.getMonth()+1}월 {dateRange.start.getDate()}일</span>
                                 )}
                                 <ChevronDown size={16} className="text-gray-400"/>
                             </button>
-
-                            {/* Controls - Row on Mobile */}
-                            <div className="flex gap-2 w-full md:w-auto order-2 md:order-1">
-                                <button onClick={handleToday} className="flex-1 md:flex-none flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs md:text-sm font-bold transition">
-                                    <CalendarDays size={14}/> 오늘
-                                </button>
-                                <button onClick={() => setIsJumpCalendarOpen(true)} className="flex-1 md:flex-none flex items-center justify-center gap-1 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-xs md:text-sm font-bold transition border border-indigo-100">
-                                    <Calendar size={14}/> 날짜 이동
-                                </button>
-                            </div>
-
-                            <div className="hidden md:block w-[100px] order-3"></div> 
                         </div>
 
                         {/* 리스트 영역 */}
@@ -1063,20 +1132,20 @@
                                                             </div>
                                                         </div>
                                                         <div className="flex-1 space-y-1.5">
-                                                            {item.source && <div className="inline-block bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-medium">{item.source}</div>}
-                                                            
-                                                            <div 
-                                                                className={`text-lg font-bold text-gray-800 leading-snug break-keep transition-all duration-300 ${isStudyMode ? 'bg-gray-200 text-transparent rounded select-none cursor-pointer hover:bg-transparent hover:text-gray-800' : ''}`}
-                                                                onClick={() => isStudyMode && alert(item.sentence)}
-                                                                title={isStudyMode ? "클릭해서 확인하기" : ""}
-                                                            >
-                                                                {item.sentence}
-                                                            </div>
+                                                {item.source && <div className="inline-block bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-medium">{item.source}</div>}
+                                                
+                                                <div 
+                                                    className={`text-lg font-bold text-gray-800 leading-snug break-keep whitespace-pre-wrap transition-all duration-300 ${isStudyMode ? 'bg-gray-200 text-transparent rounded select-none cursor-pointer hover:bg-transparent hover:text-gray-800' : ''}`}
+                                                    onClick={() => isStudyMode && alert(item.sentence)}
+                                                    title={isStudyMode ? "클릭해서 확인하기" : ""}
+                                                >
+                                                    {item.sentence}
+                                                </div>
 
-                                                            {item.translation && <p className="text-sm text-gray-600 break-keep">{item.translation}</p>}
-                                                            {item.note && <div className="bg-yellow-50 p-2.5 rounded-lg mt-2 text-xs text-yellow-800 border border-yellow-100"><span className="font-bold mr-1">💡 Note:</span> {item.note}</div>}
-                                                        </div>
-                                                        <div className="flex flex-col gap-1 ml-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                                {item.translation && <p className="text-sm text-gray-600 break-keep whitespace-pre-wrap">{item.translation}</p>}
+                                                {item.note && <div className="bg-yellow-50 p-2.5 rounded-lg mt-2 text-xs text-yellow-800 border border-yellow-100 whitespace-pre-wrap"><span className="font-bold mr-1">💡 Note:</span> {item.note}</div>}
+                                            </div>
+                                            <div className="flex flex-col gap-1 ml-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                             <button onClick={() => handleEdit(item)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><Edit2 size={16} /></button>
                                                             <button onClick={() => { setDeleteTargetId(item.id); setDateRange({start: group.date, end: group.date}); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 size={16} /></button>
                                                         </div>
@@ -1095,61 +1164,40 @@
                                 <div className="absolute inset-0 bg-black/40 modal-overlay backdrop-blur-sm" onClick={() => setIsCalendarOpen(false)}></div>
                                 <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl relative z-10 modal-content">
                                     <div className="flex justify-between items-center mb-6">
-                                        <h3 className="font-bold text-gray-800 text-lg">조회 기간 설정</h3>
+                                        <h3 className="font-bold text-gray-800 text-lg">날짜 선택</h3>
                                         <button onClick={() => setIsCalendarOpen(false)} className="bg-gray-100 p-1 rounded-full"><X size={20}/></button>
                                     </div>
                                     
-                                    <div className="space-y-4 mb-6">
-                                        <div>
-                                            <label className="text-xs font-bold text-gray-500 mb-1 block">시작일</label>
-                                            <input type="date" className="w-full p-3 bg-gray-50 rounded-xl text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-indigo-200" 
-                                                value={formatDate(tempRange.start)}
-                                                onChange={(e) => setTempRange({...tempRange, start: new Date(e.target.value)})}
-                                            />
+                                    <div className="mb-4">
+                                        <div className="flex justify-center mb-4">
+                                            <div className="bg-gray-100 p-1 rounded-lg flex text-xs font-bold text-gray-500">
+                                                <div className={`px-3 py-1.5 rounded-md ${rangeSelectionStep === 'start' ? 'bg-pink-500 text-white shadow-sm' : ''}`}>시작일</div>
+                                                <div className={`px-3 py-1.5 rounded-md ${rangeSelectionStep === 'end' ? 'bg-indigo-500 text-white shadow-sm' : ''}`}>종료일</div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="text-xs font-bold text-gray-500 mb-1 block">종료일</label>
-                                            <input type="date" className="w-full p-3 bg-gray-50 rounded-xl text-sm font-bold text-gray-800 outline-none focus:ring-2 focus:ring-indigo-200" 
-                                                value={formatDate(tempRange.end)}
-                                                onChange={(e) => setTempRange({...tempRange, end: new Date(e.target.value)})}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <button onClick={handleToday} className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition">오늘만 보기</button>
-                                        <button onClick={applyDateRange} className="flex-[2] py-3 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition shadow-md">설정 완료</button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 날짜 이동 달력 모달 (New) */}
-                        {isJumpCalendarOpen && (
-                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                                <div className="absolute inset-0 bg-black/40 modal-overlay backdrop-blur-sm" onClick={() => setIsJumpCalendarOpen(false)}></div>
-                                <div className="bg-white rounded-2xl p-4 w-full max-w-sm shadow-2xl relative z-10 modal-content">
-                                     <div className="flex justify-between items-center mb-4">
-                                        <h3 className="font-bold text-gray-800">날짜 이동</h3>
-                                        <button onClick={() => setIsJumpCalendarOpen(false)} className="bg-gray-100 p-1 rounded-full"><X size={20}/></button>
-                                    </div>
-                                    <CalendarView 
-                                        currentDate={currentDate} 
-                                        onDateChange={(d, isDayClick) => {
-                                            setCurrentDate(d); // 달력의 월 변경 등 네비게이션을 위해 업데이트
-                                            if (isDayClick) {
-                                                setDateRange({ start: d, end: d });
-                                                setIsJumpCalendarOpen(false);
+                                        
+                                        <p className="text-sm text-center text-gray-500 mb-2">
+                                            {rangeSelectionStep === 'start' ? 
+                                                <span className="text-pink-600 font-bold">시작 날짜를 선택하세요</span> : 
+                                                <span className="text-indigo-600 font-bold">종료 날짜를 선택하세요</span>
                                             }
-                                        }}
-                                        selectedDate={dateRange.end}
-                                        notebookData={notebook}
-                                        historyData={history}
-                                        studyItems={studyItems}
-                                        compact={true}
-                                    />
-                                    <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-                                        <p className="text-xs text-gray-400">이동할 날짜를 클릭하세요.</p>
+                                        </p>
+                                        <CalendarView 
+                                            currentDate={currentDate} 
+                                            onDateChange={handleRangeSelect}
+                                            notebookData={notebook}
+                                            historyData={history}
+                                            studyItems={studyItems}
+                                            compact={true}
+                                            rangeStart={tempRange.start}
+                                            rangeEnd={rangeSelectionStep === 'end' ? null : tempRange.end} 
+                                        />
+                                    </div>
+
+                                    <div className="mt-4 pt-4 border-t border-gray-100">
+                                        <button onClick={handleToday} className="w-full py-3 text-sm font-bold text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 transition shadow-md flex items-center justify-center gap-2">
+                                            <CalendarDays size={16}/> 오늘만 보기
+                                        </button>
                                     </div>
                                 </div>
                             </div>
