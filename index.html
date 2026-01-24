@@ -1366,16 +1366,17 @@
         };
 
         const MainRoot = () => {
-            const [user, setUser] = useState(localStorage.getItem('minenglish_user') || null);
+            // localStorage 대신 sessionStorage를 사용하여 브라우저 종료 시 로그인 정보가 초기화되도록 변경
+            const [user, setUser] = useState(sessionStorage.getItem('minenglish_user') || null);
 
             const handleSelectUser = (selectedUser) => {
                 setUser(selectedUser);
-                localStorage.setItem('minenglish_user', selectedUser);
+                sessionStorage.setItem('minenglish_user', selectedUser);
             };
 
             const handleLogout = () => {
                 setUser(null);
-                localStorage.removeItem('minenglish_user');
+                sessionStorage.removeItem('minenglish_user');
             };
 
             if (!user) {
