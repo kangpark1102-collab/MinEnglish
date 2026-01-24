@@ -303,11 +303,11 @@
             return (
                 <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${compact ? 'p-3' : 'p-4 md:p-6'}`}>
                     <div className="flex items-center justify-between mb-4">
-                        <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-gray-50 rounded-full transition"><ChevronLeft size={20} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); changeMonth(-1); }} className="p-2 hover:bg-gray-50 rounded-full transition"><ChevronLeft size={20} /></button>
                         <span className="font-bold text-gray-800 text-lg">
                             {currentDate.getFullYear()}년 {currentDate.getMonth()+1}월
                         </span>
-                        <button onClick={() => changeMonth(1)} className="p-2 hover:bg-gray-50 rounded-full transition"><ChevronRight size={20} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); changeMonth(1); }} className="p-2 hover:bg-gray-50 rounded-full transition"><ChevronRight size={20} /></button>
                     </div>
 
                     <div className="grid grid-cols-7 text-center mb-2">
@@ -734,23 +734,23 @@
                             studyItems={studyItems}
                         />
                         
-                        {/* 달성률 범례 (Legend) */}
-                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-wrap justify-center gap-4">
-                            <div className="flex items-center gap-2">
+                        {/* 달성률 범례 (Legend) 수정: 모바일에서 줄바꿈 개선 */}
+                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 grid grid-cols-4 gap-1 md:flex md:flex-wrap md:justify-center md:gap-4 justify-items-center">
+                            <div className="flex flex-col md:flex-row items-center gap-1 md:gap-2">
                                 <div className="w-3 h-3 rounded-full bg-rose-100 border border-rose-200"></div>
-                                <span className="text-xs text-gray-500">20% 미만</span>
+                                <span className="text-[10px] md:text-xs text-gray-500">20% 미만</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-col md:flex-row items-center gap-1 md:gap-2">
                                 <div className="w-3 h-3 rounded-full bg-orange-100 border border-orange-200"></div>
-                                <span className="text-xs text-gray-500">50% 미만</span>
+                                <span className="text-[10px] md:text-xs text-gray-500">50% 미만</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-col md:flex-row items-center gap-1 md:gap-2">
                                 <div className="w-3 h-3 rounded-full bg-yellow-100 border border-yellow-200"></div>
-                                <span className="text-xs text-gray-500">100% 미만</span>
+                                <span className="text-[10px] md:text-xs text-gray-500">100% 미만</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-col md:flex-row items-center gap-1 md:gap-2">
                                 <div className="w-3 h-3 rounded-full bg-emerald-100 border border-emerald-200"></div>
-                                <span className="text-xs text-gray-500">100% 달성</span>
+                                <span className="text-[10px] md:text-xs text-gray-500">100% 달성</span>
                             </div>
                         </div>
                     </div>
@@ -771,6 +771,9 @@
                 const [dateRange, setDateRange] = useState({ start: new Date(), end: new Date() });
                 const [tempRange, setTempRange] = useState({ start: new Date(), end: new Date() }); // 모달용 임시 상태
                 const [rangeSelectionStep, setRangeSelectionStep] = useState('start'); // 'start' or 'end'
+                
+                // 모달 내부 달력용 별도 날짜 상태 (App의 currentDate와 분리하여 모달 닫힘 방지)
+                const [pickerDate, setPickerDate] = useState(new Date());
 
                 const fileInputRef = useRef(null);
 
@@ -861,7 +864,8 @@
                 // 기간 선택 로직
                 const handleRangeSelect = (date, isDayClick) => {
                     if (!isDayClick) {
-                        setCurrentDate(date); // 월 이동만 수행
+                        // 날짜 클릭이 아닐 경우(월 이동), 로컬 상태인 pickerDate만 변경하여 모달 유지
+                        setPickerDate(date);
                         return;
                     }
 
@@ -879,6 +883,14 @@
                         setIsCalendarOpen(false);
                         setRangeSelectionStep('start'); // 리셋
                     }
+                };
+                
+                // 캘린더 모달 열 때 현재 선택된 날짜 기준으로 pickerDate 동기화
+                const openCalendar = () => {
+                    setPickerDate(dateRange.end || new Date());
+                    setTempRange(dateRange); 
+                    setRangeSelectionStep('start'); 
+                    setIsCalendarOpen(true);
                 };
 
                 // --- Excel Upload ---
@@ -1051,7 +1063,7 @@
                         {/* 상단 날짜 선택 헤더 (간소화됨) */}
                         <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex-shrink-0 flex items-center justify-center">
                             {/* Date Display (Opens Calendar) */}
-                            <button onClick={() => { setTempRange(dateRange); setRangeSelectionStep('start'); setIsCalendarOpen(true); }} className="flex items-center justify-center gap-2 font-bold text-lg md:text-xl text-gray-800 hover:bg-gray-50 px-4 py-2 rounded-xl transition w-full">
+                            <button onClick={openCalendar} className="flex items-center justify-center gap-2 font-bold text-lg md:text-xl text-gray-800 hover:bg-gray-50 px-4 py-2 rounded-xl transition w-full">
                                 <CalendarIcon size={20} className="text-pink-500"/>
                                 {isRangeMode ? (
                                     <span>{formatDate(dateRange.start).slice(5)} ~ {formatDate(dateRange.end).slice(5)}</span>
@@ -1158,11 +1170,11 @@
                             </div>
                         </div>
 
-                        {/* 기간 설정 모달 */}
+                        {/* 기간 설정 모달 (수정됨: 모바일에서 화면 잘림 방지) */}
                         {isCalendarOpen && (
                             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                                 <div className="absolute inset-0 bg-black/40 modal-overlay backdrop-blur-sm" onClick={() => setIsCalendarOpen(false)}></div>
-                                <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl relative z-10 modal-content">
+                                <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl relative z-10 modal-content max-h-[85vh] overflow-y-auto">
                                     <div className="flex justify-between items-center mb-6">
                                         <h3 className="font-bold text-gray-800 text-lg">날짜 선택</h3>
                                         <button onClick={() => setIsCalendarOpen(false)} className="bg-gray-100 p-1 rounded-full"><X size={20}/></button>
@@ -1183,7 +1195,7 @@
                                             }
                                         </p>
                                         <CalendarView 
-                                            currentDate={currentDate} 
+                                            currentDate={pickerDate} 
                                             onDateChange={handleRangeSelect}
                                             notebookData={notebook}
                                             historyData={history}
