@@ -510,13 +510,12 @@
             );
         };
 
-        // --- Weekly Goal Component (New Text-Based) ---
-        const WeeklyGoal = ({ goalData, onSetGoal }) => {
+        // --- Weekly Goal Component (Updated for Compact) ---
+        const WeeklyGoal = ({ goalData, onSetGoal, compact = false }) => {
             const [isEditing, setIsEditing] = useState(false);
             const [inputText, setInputText] = useState('');
 
             const currentWeekId = getWeekId(new Date());
-            // 목표가 있고, 현재 주차와 ID가 같으면 유효
             const hasValidGoal = goalData && goalData.text && goalData.weekId === currentWeekId;
 
             useEffect(() => {
@@ -533,49 +532,58 @@
                 setIsEditing(false);
             };
 
+            const containerClass = `bg-white ${compact ? 'p-3 rounded-xl' : 'p-4 rounded-xl'} shadow-sm border border-pink-100 relative overflow-hidden flex-shrink-0 animate-fade-in ${compact ? 'h-full flex flex-col' : ''}`;
+
+            // PC 버전에서 텍스트가 잘리지 않도록 클래스 조정 (line-clamp 제거, whitespace-normal 등)
+            const textClass = compact 
+                ? 'text-sm font-bold text-gray-800 break-words leading-tight line-clamp-2' 
+                : 'text-lg font-bold text-gray-800 break-words leading-snug whitespace-pre-wrap';
+
             return (
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-pink-100 mb-4 animate-fade-in relative overflow-hidden">
+                <div className={containerClass}>
                     <div className="absolute top-0 left-0 w-1.5 h-full bg-pink-400"></div>
                     
-                    <div className="flex justify-between items-center mb-2 pl-2">
-                        <h3 className="text-sm font-bold text-gray-600 flex items-center gap-1">
-                            <Trophy size={16} className="text-pink-500" /> 
-                            이번 주 목표
+                    <div className={`flex justify-between items-center ${compact ? 'mb-1 pl-2' : 'mb-2 pl-2'}`}>
+                        <h3 className={`${compact ? 'text-xs' : 'text-sm'} font-bold text-gray-600 flex items-center gap-1 whitespace-nowrap`}>
+                            <Trophy size={compact ? 14 : 16} className="text-pink-500" /> 
+                            {compact ? '목표' : '이번 주 목표'}
                         </h3>
                         {!isEditing && hasValidGoal && (
                             <button onClick={() => setIsEditing(true)} className="text-gray-300 hover:text-pink-500 transition bg-gray-50 p-1 rounded-md">
-                                <Edit2 size={14} />
+                                <Edit2 size={compact ? 12 : 14} />
                             </button>
                         )}
                     </div>
 
-                    <div className="pl-2">
+                    <div className={`pl-2 flex-1 flex flex-col ${compact ? 'justify-center' : ''} min-w-0`}>
                         {isEditing || !hasValidGoal ? (
                             <div className="flex flex-col gap-2">
                                 <input 
                                     type="text" 
                                     value={inputText}
                                     onChange={(e) => setInputText(e.target.value)}
-                                    placeholder="이번 주 목표를 입력하세요 (예: 챕터 3 완료)"
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-pink-300 transition"
+                                    placeholder={compact ? "목표 입력" : "이번 주 목표를 입력하세요"}
+                                    className={`w-full bg-gray-50 border border-gray-200 rounded-lg ${compact ? 'px-2 py-1 text-xs' : 'px-3 py-2 text-sm'} focus:outline-none focus:border-pink-300 transition`}
                                     onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                                     autoFocus={isEditing}
                                 />
                                 <button 
                                     onClick={handleSave}
-                                    className="w-full bg-pink-500 text-white py-2 rounded-lg text-sm font-bold hover:bg-pink-600 transition shadow-sm"
+                                    className={`w-full bg-pink-500 text-white ${compact ? 'py-1 text-xs' : 'py-2 text-sm'} rounded-lg font-bold hover:bg-pink-600 transition shadow-sm`}
                                 >
                                     저장
                                 </button>
                             </div>
                         ) : (
                             <div>
-                                <p className="text-lg font-bold text-gray-800 break-words leading-snug">
+                                <p className={textClass}>
                                     {goalData.text}
                                 </p>
-                                <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
-                                    <RefreshCw size={10} /> 월요일에 초기화됩니다 ✨
-                                </p>
+                                {!compact && (
+                                    <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+                                        <RefreshCw size={10} /> 월요일에 초기화됩니다 ✨
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>
@@ -583,59 +591,64 @@
             );
         };
 
-        const RivalCard = ({ myCount, rivalCount, rivalName, isSomin }) => {
+        // --- Rival Card Component (Updated for Compact) ---
+        const RivalCard = ({ myCount, rivalCount, rivalName, isSomin, compact = false }) => {
             let color = "bg-blue-50 text-blue-700 border-blue-100";
-            let icon = <Zap size={16} />;
+            let icon = <Zap size={compact ? 14 : 16} />;
             let line1 = "";
             let line2 = null;
 
             if (isSomin) {
                 color = "bg-pink-50 text-pink-700 border-pink-100";
-                icon = <Sparkles size={16} className="text-pink-500 fill-pink-200" />;
-                line1 = "이번 주도 꾸준히 성장 중! 🌸";
+                icon = <Sparkles size={compact ? 14 : 16} className="text-pink-500 fill-pink-200" />;
+                line1 = compact ? "꾸준히 성장 중!" : "이번 주도 꾸준히 성장 중! 🌸";
                 line2 = (
                     <span>
-                        함께 <span className="font-black text-lg text-pink-600 underline decoration-pink-300 decoration-2 underline-offset-2">{myCount}문장</span>을 공부 중이에요.
+                        <span className={`font-black ${compact ? 'text-sm' : 'text-lg'} text-pink-600`}>{myCount}문장</span> {compact ? '공부 중' : '공부 중이에요.'}
                     </span>
                 );
             } else {
                 const diff = myCount - rivalCount;
                 if (diff > 0) {
                     color = "bg-indigo-50 text-indigo-700 border-indigo-100";
-                    icon = <Flame size={16} className="text-indigo-500 fill-indigo-200" />;
-                    line1 = "이번 주 🔥 질주중!";
+                    icon = <Flame size={compact ? 14 : 16} className="text-indigo-500 fill-indigo-200" />;
+                    line1 = compact ? "🔥 질주중!" : "이번 주 🔥 질주중!";
                     line2 = (
                         <span>
-                            {rivalName}님보다 <span className="font-black text-lg text-indigo-600">{diff}문장</span> 앞서요!
+                            {compact ? `${diff}개 앞서요` : <span>{rivalName}님보다 <span className="font-black text-lg text-indigo-600">{diff}문장</span> 앞서요!</span>}
                         </span>
                     );
                 } else if (diff < 0) {
                     color = "bg-orange-50 text-orange-800 border-orange-100";
-                    icon = <AlertTriangle size={16} className="text-orange-500" />;
-                    line1 = "이번 주 ⚡ 분발필요!";
+                    icon = <AlertTriangle size={compact ? 14 : 16} className="text-orange-500" />;
+                    line1 = compact ? "⚡ 분발필요!" : "이번 주 ⚡ 분발필요!";
                     line2 = (
                         <span>
-                            {rivalName}님이 <span className="font-black text-lg text-orange-600">{Math.abs(diff)}문장</span> 더 했어요.
+                            {compact ? `${Math.abs(diff)}개 뒤쳐짐` : <span>{rivalName}님이 <span className="font-black text-lg text-orange-600">{Math.abs(diff)}문장</span> 더 했어요.</span>}
                         </span>
                     );
                 } else {
                     color = "bg-purple-50 text-purple-700 border-purple-100";
-                    icon = <Trophy size={16} className="text-purple-500" />;
-                    line1 = `이번 주 ✨ ${rivalName}님과 막상막하!`;
+                    icon = <Trophy size={compact ? 14 : 16} className="text-purple-500" />;
+                    line1 = compact ? "✨ 막상막하!" : `이번 주 ✨ ${rivalName}님과 막상막하!`;
                     line2 = (
                         <span>
-                            <span className="font-black text-lg text-purple-600">{myCount}문장</span>으로 동률입니다.
+                            {compact ? `${myCount}개 동률` : <span><span className="font-black text-lg text-purple-600">{myCount}문장</span>으로 동률입니다.</span>}
                         </span>
                     );
                 }
             }
 
+            // Compact 모드일 때는 truncate 유지, PC 모드(Sidebar)일 때는 wrap 허용
+            const textClass1 = `text-xs font-bold opacity-80 ${compact ? 'mb-0 truncate' : 'mb-0.5 whitespace-normal'}`;
+            const textClass2 = `${compact ? 'text-xs truncate' : 'text-sm whitespace-normal'} font-bold leading-tight`;
+
             return (
-                <div className={`px-4 py-3 rounded-xl border ${color} flex items-start gap-3 shadow-sm animate-fade-in mb-3 mx-1`}>
-                    <div className="shrink-0 p-1.5 bg-white/60 rounded-full shadow-sm mt-0.5">{icon}</div>
-                    <div className="flex-1 flex flex-col justify-center">
-                        <div className="text-xs font-bold opacity-80 mb-0.5">{line1}</div>
-                        <div className="text-sm font-bold leading-tight">{line2}</div>
+                <div className={`${compact ? 'px-3 py-3 rounded-xl gap-2 h-full' : 'px-4 py-3 rounded-xl gap-3 mb-4 mx-1 flex-shrink-0'} border ${color} flex items-center shadow-sm animate-fade-in`}>
+                    <div className="shrink-0 p-1.5 bg-white/60 rounded-full shadow-sm">{icon}</div>
+                    <div className="flex-1 flex flex-col justify-center min-w-0">
+                        <div className={textClass1}>{line1}</div>
+                        <div className={textClass2}>{line2}</div>
                     </div>
                 </div>
             );
@@ -1314,7 +1327,7 @@
             const [history, setHistory] = useState({});
             const [notebook, setNotebook] = useState({});
             const [studyItems, setStudyItems] = useState(DEFAULT_STUDY_ITEMS);
-            const [weeklyGoal, setWeeklyGoal] = useState(null); // { text: "...", weekId: "2024-05-20" } 형태
+            const [weeklyGoal, setWeeklyGoal] = useState(null);
 
             // 라이벌 데이터 (소연<->민우)
             const [rivalData, setRivalData] = useState(null);
@@ -1481,14 +1494,14 @@
                 <div className="w-full h-screen bg-gray-50 flex flex-col md:flex-row text-gray-800 overflow-hidden">
 
                     {/* [Desktop] Sidebar */}
-                    <aside className="hidden md:flex flex-col w-64 bg-white/80 backdrop-blur-xl border-r border-white/50 p-6 shadow-sm z-20">
-                        <div className="flex items-center gap-3 mb-10 px-2">
+                    <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-100 p-6 shadow-sm z-20 h-full overflow-y-auto">
+                        <div className="flex items-center gap-3 mb-10 px-2 flex-shrink-0">
                             <div className="bg-pink-500 p-2 rounded-xl text-white shadow-md transform rotate-3"><Heart size={24} className="fill-white" /></div>
                             <div><h1 className="text-xl font-black text-gray-800 tracking-tight">Somin<br />English</h1></div>
                         </div>
 
                         {/* User Profile in Sidebar */}
-                        <div className="mb-6 bg-white p-3 rounded-xl flex items-center gap-3 border border-gray-100 shadow-sm">
+                        <div className="mb-6 bg-white p-3 rounded-xl flex items-center gap-3 border border-gray-100 shadow-sm flex-shrink-0">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${currentUser.color}`}>
                                 {currentUser.initial}
                             </div>
@@ -1499,7 +1512,7 @@
                         </div>
 
                         {/* Weekly Goal (Desktop) */}
-                        <div className="mb-6">
+                        <div className="mb-6 flex-shrink-0">
                             <WeeklyGoal
                                 goalData={weeklyGoal}
                                 onSetGoal={setWeeklyGoalValue}
@@ -1508,7 +1521,7 @@
 
                         {/* Rival Card (Desktop) */}
                         {((rivalId && rivalData) || isSomin) && (
-                            <div className="mb-6">
+                            <div className="mb-6 flex-shrink-0">
                                 <p className="text-xs font-bold text-gray-400 mb-2 px-1">
                                     {isSomin ? '🌱 이번 주 학습 현황' : '🏆 이번 주 경쟁 현황'}
                                 </p>
@@ -1531,7 +1544,7 @@
                         </nav>
 
                         {/* Logout / Switch User */}
-                        <div className="mt-auto pt-4 border-t border-gray-100">
+                        <div className="mt-auto pt-4 border-t border-gray-100 flex-shrink-0">
                             <button onClick={onLogout} className="w-full flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-white px-4 py-2 rounded-lg transition text-sm">
                                 <LogOut size={16} /> 사용자 변경
                             </button>
@@ -1541,7 +1554,7 @@
                     {/* Main Content Area */}
                     <main className="flex-1 flex flex-col h-full overflow-hidden relative">
                         {/* [Mobile] Header */}
-                        <header className="md:hidden bg-white/90 backdrop-blur-md p-4 sticky top-0 z-20 border-b border-gray-100 shadow-sm">
+                        <header className="md:hidden bg-white/90 backdrop-blur-md p-4 sticky top-0 z-20 border-b border-gray-100 shadow-sm flex-shrink-0">
                             <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-3">
                                     <div>
@@ -1556,27 +1569,31 @@
                                 <button onClick={onLogout} className="text-gray-400 hover:text-gray-600 p-2"><LogOut size={20} /></button>
                             </div>
 
-                            {/* Weekly Goal (Mobile) */}
-                            <div className="mb-2">
-                                <WeeklyGoal
-                                    goalData={weeklyGoal}
-                                    onSetGoal={setWeeklyGoalValue}
-                                />
+                            {/* Goal & Rival Container (Modified for Compact Layout) */}
+                            <div className="flex gap-2 mb-1 h-24"> {/* 높이 고정으로 안정성 확보 */}
+                                <div className="flex-1 min-w-0 h-full">
+                                    <WeeklyGoal
+                                        goalData={weeklyGoal}
+                                        onSetGoal={setWeeklyGoalValue}
+                                        compact={true}
+                                    />
+                                </div>
+                                {((rivalId && rivalData) || isSomin) && (
+                                    <div className="flex-1 min-w-0 h-full">
+                                        <RivalCard
+                                            myCount={myWeeklyCount}
+                                            rivalCount={rivalWeeklyCount}
+                                            rivalName={rivalId ? USERS[rivalId].name : ''}
+                                            isSomin={isSomin}
+                                            compact={true}
+                                        />
+                                    </div>
+                                )}
                             </div>
-
-                            {/* Rival Card (Mobile) */}
-                            {((rivalId && rivalData) || isSomin) && (
-                                <RivalCard
-                                    myCount={myWeeklyCount}
-                                    rivalCount={rivalWeeklyCount}
-                                    rivalName={rivalId ? USERS[rivalId].name : ''}
-                                    isSomin={isSomin}
-                                />
-                            )}
                         </header>
 
                         {/* [Desktop] Header */}
-                        <header className="hidden md:flex bg-white/60 backdrop-blur-md px-8 py-4 border-b border-white/50 justify-between items-center sticky top-0 z-10">
+                        <header className="hidden md:flex bg-white/60 backdrop-blur-md px-8 py-4 border-b border-white/50 justify-between items-center sticky top-0 z-10 flex-shrink-0">
                             <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                                 {activeTab === 'scheduler' ? 'Daily Scheduler' : 'My Study Notebook'}
                                 <span className="text-2xl">🌸</span>
@@ -1592,7 +1609,7 @@
 
                         {/* [Mobile] Sub-tabs */}
                         {activeTab === 'scheduler' && (
-                            <div className="md:hidden bg-white px-5 pb-3 border-b border-gray-100">
+                            <div className="md:hidden bg-white px-5 pb-3 border-b border-gray-100 flex-shrink-0">
                                 <div className="flex bg-gray-100 p-1 rounded-xl">
                                     <button onClick={() => setView('daily')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${view === 'daily' ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-500'}`}>일간</button>
                                     <button onClick={() => setView('weekly')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${view === 'weekly' ? 'bg-white text-pink-600 shadow-sm' : 'text-gray-500'}`}>주간</button>
@@ -1657,7 +1674,7 @@
                         </div>
 
                         {/* [Mobile] Bottom Navigation */}
-                        <nav className="md:hidden bg-white border-t border-gray-100 px-6 py-3 pb-6 flex justify-around items-center z-20 shadow-[0_-5px_10px_rgba(0,0,0,0.02)]">
+                        <nav className="md:hidden bg-white border-t border-gray-100 px-6 py-2 flex justify-around items-center z-20 shadow-[0_-5px_10px_rgba(0,0,0,0.02)] flex-shrink-0">
                             <button onClick={() => setActiveTab('scheduler')} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-20 ${activeTab === 'scheduler' ? 'text-pink-600' : 'text-gray-400'}`}>
                                 <LayoutDashboard size={24} strokeWidth={activeTab === 'scheduler' ? 2.5 : 2} />
                                 <span className="text-[10px] font-bold">스케줄러</span>
