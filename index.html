@@ -1,26 +1,27 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Somin English 🌸 - 사랑스러운 영어 공부</title>
-    
+
     <!-- React & DOM -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    
+
     <!-- Babel (JSX 변환용) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Lucide Icons (Vanilla) -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- Excel Export/Import (SheetJS with Style Support) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-    
+
     <!-- PDF Export (html2pdf.js) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
@@ -47,34 +48,76 @@
     </script>
 
     <!-- Font -->
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+    <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
 
     <style>
-        body { 
-            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; 
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
             /* 사랑스러운 배경 그라데이션 적용 */
             background: linear-gradient(135deg, #fff0f5 0%, #f3e8ff 50%, #e0e7ff 100%);
             margin: 0;
             padding: 0;
-            overflow: hidden; 
+            overflow: hidden;
         }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
+
         .animate-fade-in {
             animation: fadeIn 0.4s ease-out forwards;
         }
 
-        @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes modalScaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .modal-overlay { animation: modalFadeIn 0.2s ease-out forwards; }
-        .modal-content { animation: modalScaleIn 0.2s ease-out forwards; }
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes modalScaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-overlay {
+            animation: modalFadeIn 0.2s ease-out forwards;
+        }
+
+        .modal-content {
+            animation: modalScaleIn 0.2s ease-out forwards;
+        }
     </style>
 </head>
+
 <body>
     <div id="root"></div>
 
@@ -145,28 +188,120 @@
             return `${year}-${month}-${day}`;
         };
 
+        // 연속 학습일 계산 헬퍼
+        const calculateStreak = (historyData, notebookData) => {
+            if (!historyData && !notebookData) return { current: 0, best: 0, lastStudyDate: null };
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // 공부한 날짜들을 Set으로 관리
+            const studyDates = new Set();
+
+            // history에서 공부한 날짜 추출 (최소 1개 항목 완료)
+            if (historyData) {
+                Object.entries(historyData).forEach(([dateStr, items]) => {
+                    const hasCompleted = Object.values(items).some(v => v === true);
+                    if (hasCompleted) studyDates.add(dateStr);
+                });
+            }
+
+            // notebook에서 공부한 날짜 추출
+            if (notebookData) {
+                Object.entries(notebookData).forEach(([dateStr, items]) => {
+                    if (items && items.length > 0) studyDates.add(dateStr);
+                });
+            }
+
+            if (studyDates.size === 0) return { current: 0, best: 0, lastStudyDate: null };
+
+            // 날짜 정렬
+            const sortedDates = Array.from(studyDates).sort().map(d => new Date(d));
+            const lastStudyDate = sortedDates[sortedDates.length - 1];
+
+            // 현재 연속 학습일 계산
+            let currentStreak = 0;
+            const checkDate = new Date(today);
+
+            // 오늘 또는 어제까지 공부했는지 확인
+            const todayStr = formatDate(today);
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = formatDate(yesterday);
+
+            if (studyDates.has(todayStr)) {
+                currentStreak = 1;
+                checkDate.setDate(checkDate.getDate() - 1);
+            } else if (studyDates.has(yesterdayStr)) {
+                currentStreak = 1;
+                checkDate.setTime(yesterday.getTime());
+                checkDate.setDate(checkDate.getDate() - 1);
+            } else {
+                // 오늘도 어제도 공부 안 했으면 streak 끊김
+                return { current: 0, best: calculateBestStreak(sortedDates), lastStudyDate };
+            }
+
+            // 이전 날짜들 확인
+            while (true) {
+                const dateStr = formatDate(checkDate);
+                if (studyDates.has(dateStr)) {
+                    currentStreak++;
+                    checkDate.setDate(checkDate.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+
+            const bestStreak = Math.max(currentStreak, calculateBestStreak(sortedDates));
+
+            return { current: currentStreak, best: bestStreak, lastStudyDate };
+        };
+
+        // 최고 연속 학습일 계산
+        const calculateBestStreak = (sortedDates) => {
+            if (sortedDates.length === 0) return 0;
+
+            let maxStreak = 1;
+            let currentStreak = 1;
+
+            for (let i = 1; i < sortedDates.length; i++) {
+                const prevDate = sortedDates[i - 1];
+                const currDate = sortedDates[i];
+                const diffDays = Math.round((currDate - prevDate) / (1000 * 60 * 60 * 24));
+
+                if (diffDays === 1) {
+                    currentStreak++;
+                    maxStreak = Math.max(maxStreak, currentStreak);
+                } else {
+                    currentStreak = 1;
+                }
+            }
+
+            return maxStreak;
+        };
+
         // 주간 카운트 계산 헬퍼
         const getWeeklyItemCount = (notebookData) => {
             if (!notebookData) return 0;
-            
+
             const today = new Date();
             const day = today.getDay();
             const diff = today.getDate() - day + (day === 0 ? -6 : 1); // 월요일 기준
             const monday = new Date(today.setDate(diff));
-            monday.setHours(0,0,0,0);
-            
+            monday.setHours(0, 0, 0, 0);
+
             const nextMonday = new Date(monday);
             nextMonday.setDate(monday.getDate() + 7);
-            
+
             let count = 0;
-            
+
             Object.entries(notebookData).forEach(([dateStr, items]) => {
                 const date = new Date(dateStr);
                 if (date >= monday && date < nextMonday) {
                     count += items.length;
                 }
             });
-            
+
             return count;
         };
 
@@ -188,11 +323,11 @@
                         } catch (e) {
                             console.error("Firebase init failed:", e);
                             setError(e.message);
-                            setIsReady(true); 
+                            setIsReady(true);
                         }
                     }
                 };
-                
+
                 const checkModules = setInterval(() => {
                     if (window.firebaseModules) {
                         clearInterval(checkModules);
@@ -225,11 +360,11 @@
                                     let borderColor = 'border-pink-100 hover:border-pink-300';
                                     let bgHover = 'hover:bg-pink-50';
                                     let iconBg = 'bg-pink-100 text-pink-500';
-                                    if(key === 'minwoo') { borderColor = 'border-blue-100 hover:border-blue-300'; bgHover='hover:bg-blue-50'; iconBg='bg-blue-100 text-blue-500'; }
-                                    if(key === 'somin') { borderColor = 'border-purple-100 hover:border-purple-300'; bgHover='hover:bg-purple-50'; iconBg='bg-purple-100 text-purple-500'; }
+                                    if (key === 'minwoo') { borderColor = 'border-blue-100 hover:border-blue-300'; bgHover = 'hover:bg-blue-50'; iconBg = 'bg-blue-100 text-blue-500'; }
+                                    if (key === 'somin') { borderColor = 'border-purple-100 hover:border-purple-300'; bgHover = 'hover:bg-purple-50'; iconBg = 'bg-purple-100 text-purple-500'; }
 
                                     return (
-                                        <button 
+                                        <button
                                             key={key}
                                             onClick={() => onSelectUser(key)}
                                             className={`w-full group relative flex items-center p-4 rounded-2xl border-2 ${borderColor} ${bgHover} transition-all duration-300 shadow-sm`}
@@ -259,10 +394,10 @@
                 const month = currentDate.getMonth();
                 const firstDay = new Date(year, month, 1);
                 const lastDay = new Date(year, month + 1, 0);
-                
+
                 const days = [];
-                for(let i=0; i<firstDay.getDay(); i++) days.push(null);
-                for(let i=1; i<=lastDay.getDate(); i++) days.push(new Date(year, month, i));
+                for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
+                for (let i = 1; i <= lastDay.getDate(); i++) days.push(new Date(year, month, i));
                 return days;
             };
 
@@ -278,7 +413,7 @@
 
             const getDailyProgress = (dateStr) => {
                 const data = historyData[dateStr] || {};
-                const activeItemsCount = studyItems.length || 1; 
+                const activeItemsCount = studyItems.length || 1;
                 const completedCount = studyItems.filter(item => data[item.id]).length;
                 return Math.round((completedCount / activeItemsCount) * 100);
             };
@@ -310,29 +445,29 @@
                     <div className="flex items-center justify-between mb-4">
                         <button onClick={(e) => changeMonth(e, -1)} className="p-2 hover:bg-gray-50 rounded-full transition"><ChevronLeft size={20} /></button>
                         <span className="font-bold text-gray-800 text-lg">
-                            {currentDate.getFullYear()}년 {currentDate.getMonth()+1}월
+                            {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
                         </span>
                         <button onClick={(e) => changeMonth(e, 1)} className="p-2 hover:bg-gray-50 rounded-full transition"><ChevronRight size={20} /></button>
                     </div>
 
                     <div className="grid grid-cols-7 text-center mb-2">
-                        {['일','월','화','수','목','금','토'].map((d, i) => (
-                            <div key={i} className={`text-xs font-medium py-2 ${i===0 ? 'text-rose-500' : 'text-gray-400'}`}>{d}</div>
+                        {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
+                            <div key={i} className={`text-xs font-medium py-2 ${i === 0 ? 'text-rose-500' : 'text-gray-400'}`}>{d}</div>
                         ))}
                     </div>
                     <div className="grid grid-cols-7 gap-1 md:gap-2">
                         {monthDays.map((day, idx) => {
-                            if(!day) return <div key={idx} className="aspect-square"></div>;
-                            
+                            if (!day) return <div key={idx} className="aspect-square"></div>;
+
                             const dateStr = formatDate(day);
                             const isSelected = selectedDate && formatDate(selectedDate) === dateStr;
                             const isToday = dateStr === todayStr;
                             const hasNote = notebookData[dateStr] && notebookData[dateStr].length > 0;
                             const progress = getDailyProgress(dateStr);
-                            
+
                             const inRange = isInRange(day);
                             const edge = isRangeEdge(day);
-                            
+
                             let buttonClass = '';
                             if (edge) {
                                 buttonClass = 'bg-pink-500 text-white font-bold shadow-md transform scale-105 z-20';
@@ -343,8 +478,8 @@
                             }
 
                             return (
-                                <button 
-                                    key={idx} 
+                                <button
+                                    key={idx}
                                     onClick={() => onDateChange(day, true)}
                                     className={`aspect-square flex flex-col items-center justify-center relative rounded-xl transition-all duration-200
                                         ${buttonClass}
@@ -365,7 +500,7 @@
         };
 
         // --- Sub-Components ---
-        
+
         const ErrorBanner = ({ error }) => {
             if (!error) return null;
             return (
@@ -379,7 +514,7 @@
         // 문장 표시 컴포넌트 (학습 모드 클릭 토글 지원)
         const SentenceDisplay = ({ text, isStudyMode }) => {
             const [isRevealed, setIsRevealed] = useState(false);
-            
+
             // 학습 모드가 꺼지면 revealed 상태 초기화
             useEffect(() => {
                 if (!isStudyMode) setIsRevealed(false);
@@ -390,7 +525,7 @@
             };
 
             return (
-                <div 
+                <div
                     onClick={handleClick}
                     className={`text-lg font-bold text-gray-800 leading-snug break-keep whitespace-pre-wrap transition-all duration-300 
                     ${isStudyMode && !isRevealed ? 'bg-gray-200 text-transparent rounded select-none cursor-pointer hover:bg-gray-300' : ''}`}
@@ -398,6 +533,256 @@
                 >
                     {text}
                 </div>
+            );
+        };
+
+        // Streak Card - 연속 학습일 표시 컴포넌트
+        const StreakCard = ({ streakInfo }) => {
+            const { current, best } = streakInfo;
+
+            // Streak 상태에 따른 메시지 및 스타일 결정
+            let bgColor = "bg-gray-50";
+            let borderColor = "border-gray-100";
+            let textColor = "text-gray-700";
+            let icon = <Flame size={16} className="text-gray-400" />;
+            let message = "오늘 공부를 시작해보세요!";
+            let subMessage = null;
+
+            if (current === 0) {
+                bgColor = "bg-gray-50";
+                borderColor = "border-gray-200";
+                textColor = "text-gray-600";
+                icon = <AlertCircle size={16} className="text-gray-400" />;
+                message = "새로운 연속 학습을 시작하세요! 🌱";
+                if (best > 0) {
+                    subMessage = <span className="text-xs">최고 기록: {best}일 연속</span>;
+                }
+            } else if (current >= 30) {
+                bgColor = "bg-gradient-to-r from-purple-50 to-pink-50";
+                borderColor = "border-purple-200";
+                textColor = "text-purple-700";
+                icon = <Trophy size={18} className="text-purple-500 fill-purple-200" />;
+                message = "🎉 전설의 학습자!";
+                subMessage = <span className="font-black text-2xl text-purple-600">{current}일 연속</span>;
+            } else if (current >= 14) {
+                bgColor = "bg-gradient-to-r from-indigo-50 to-blue-50";
+                borderColor = "border-indigo-200";
+                textColor = "text-indigo-700";
+                icon = <Sparkles size={18} className="text-indigo-500 fill-indigo-200" />;
+                message = "🔥 대단해요! 2주 돌파!";
+                subMessage = <span className="font-black text-2xl text-indigo-600">{current}일 연속</span>;
+            } else if (current >= 7) {
+                bgColor = "bg-gradient-to-r from-emerald-50 to-teal-50";
+                borderColor = "border-emerald-200";
+                textColor = "text-emerald-700";
+                icon = <Zap size={18} className="text-emerald-500 fill-emerald-200" />;
+                message = "✨ 일주일 달성! 멋져요!";
+                subMessage = <span className="font-black text-2xl text-emerald-600">{current}일 연속</span>;
+            } else if (current >= 3) {
+                bgColor = "bg-gradient-to-r from-orange-50 to-yellow-50";
+                borderColor = "border-orange-200";
+                textColor = "text-orange-700";
+                icon = <Flame size={18} className="text-orange-500 fill-orange-200" />;
+                message = "🔥 좋아요! 계속 가세요!";
+                subMessage = <span className="font-black text-2xl text-orange-600">{current}일 연속</span>;
+            } else {
+                bgColor = "bg-gradient-to-r from-pink-50 to-rose-50";
+                borderColor = "border-pink-200";
+                textColor = "text-pink-700";
+                icon = <Heart size={16} className="text-pink-500 fill-pink-200" />;
+                message = "💪 좋은 시작이에요!";
+                subMessage = <span className="font-black text-2xl text-pink-600">{current}일 연속</span>;
+            }
+
+            return (
+                <div className={`px-4 py-3 rounded-xl border ${borderColor} ${bgColor} shadow-sm animate-fade-in mb-3 mx-1`}>
+                    <div className="flex items-start gap-3">
+                        <div className="shrink-0 p-1.5 bg-white/60 rounded-full shadow-sm mt-0.5">
+                            {icon}
+                        </div>
+                        <div className="flex-1 flex flex-col justify-center">
+                            <div className={`text-xs font-bold opacity-90 mb-0.5 ${textColor}`}>
+                                {message}
+                            </div>
+                            <div className={`text-sm font-bold leading-tight ${textColor}`}>
+                                {subMessage}
+                            </div>
+                            {best > current && current > 0 && (
+                                <div className="text-[10px] text-gray-500 mt-1">
+                                    최고 기록: {best}일 🏆
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Weekly Goal Component - 주간 목표 설정 및 진행률 표시
+        const WeeklyGoal = ({ weeklyCount, weeklyGoal, onSetGoal, userId }) => {
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [newGoal, setNewGoal] = useState('');
+
+            const defaultGoal = 30; // 기본 목표: 주당 30문장
+            const goal = weeklyGoal || defaultGoal;
+            const progress = Math.min(Math.round((weeklyCount / goal) * 100), 100);
+            const isAchieved = weeklyCount >= goal;
+
+            // 원형 progress bar 파라미터
+            const radius = 35;
+            const circumference = 2 * Math.PI * radius;
+            const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+            let statusColor = "text-gray-600";
+            let progressColor = "#ec4899"; // pink-500
+            let bgColor = "bg-gray-50";
+            let borderColor = "border-gray-200";
+            let message = "이번 주 목표를 설정해보세요!";
+
+            if (isAchieved) {
+                statusColor = "text-emerald-700";
+                progressColor = "#10b981"; // emerald-500
+                bgColor = "bg-gradient-to-br from-emerald-50 to-teal-50";
+                borderColor = "border-emerald-200";
+                message = "🎉 목표 달성 완료!";
+            } else if (progress >= 80) {
+                statusColor = "text-indigo-700";
+                progressColor = "#6366f1"; // indigo-500
+                bgColor = "bg-gradient-to-br from-indigo-50 to-blue-50";
+                borderColor = "border-indigo-200";
+                message = "💪 거의 다 왔어요!";
+            } else if (progress >= 50) {
+                statusColor = "text-orange-700";
+                progressColor = "#f59e0b"; // amber-500
+                bgColor = "bg-gradient-to-br from-orange-50 to-yellow-50";
+                borderColor = "border-orange-200";
+                message = "🔥 중간 지점 돌파!";
+            } else {
+                statusColor = "text-pink-700";
+                progressColor = "#ec4899"; // pink-500
+                bgColor = "bg-gradient-to-br from-pink-50 to-rose-50";
+                borderColor = "border-pink-200";
+                message = "🌱 시작이 반이에요!";
+            }
+
+            const handleSetGoal = () => {
+                const goalValue = parseInt(newGoal);
+                if (goalValue && goalValue > 0 && goalValue <= 500) {
+                    onSetGoal(goalValue);
+                    setIsModalOpen(false);
+                    setNewGoal('');
+                }
+            };
+
+            return (
+                <>
+                    <div className={`p-4 rounded-xl border ${borderColor} ${bgColor} shadow-sm animate-fade-in mb-3 mx-1 cursor-pointer hover:shadow-md transition-shadow`} onClick={() => setIsModalOpen(true)}>
+                        <div className="flex items-center gap-4">
+                            {/* Circular Progress */}
+                            <div className="relative w-20 h-20 flex-shrink-0">
+                                <svg className="transform -rotate-90 w-20 h-20">
+                                    <circle
+                                        cx="40"
+                                        cy="40"
+                                        r={radius}
+                                        stroke="#e5e7eb"
+                                        strokeWidth="6"
+                                        fill="none"
+                                    />
+                                    <circle
+                                        cx="40"
+                                        cy="40"
+                                        r={radius}
+                                        stroke={progressColor}
+                                        strokeWidth="6"
+                                        fill="none"
+                                        strokeDasharray={circumference}
+                                        strokeDashoffset={strokeDashoffset}
+                                        strokeLinecap="round"
+                                        className="transition-all duration-500"
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className={`text-sm font-black ${statusColor}`}>{progress}%</span>
+                                </div>
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1">
+                                <div className={`text-xs font-bold mb-1 ${statusColor}`}>{message}</div>
+                                <div className="text-sm font-bold text-gray-800">
+                                    {weeklyCount} / {goal} 문장
+                                </div>
+                                <div className="text-[10px] text-gray-500 mt-0.5">
+                                    {goal === defaultGoal ? "기본 목표" : "나만의 목표"} • 클릭하여 변경
+                                </div>
+                            </div>
+
+                            {isAchieved && (
+                                <Trophy size={24} className="text-emerald-500 fill-emerald-200 animate-pulse" />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Goal Setting Modal */}
+                    {isModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <div className="absolute inset-0 bg-black/40 modal-overlay backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
+                            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl relative z-10 modal-content">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-bold text-gray-800">주간 목표 설정</h3>
+                                    <button onClick={() => setIsModalOpen(false)} className="bg-gray-100 p-1 rounded-full">
+                                        <X size={20} />
+                                    </button>
+                                </div>
+
+                                <div className="bg-pink-50 p-3 rounded-xl mb-4 text-center">
+                                    <div className="text-3xl font-black text-pink-600 mb-1">{weeklyCount}</div>
+                                    <div className="text-xs text-pink-700">이번 주 학습한 문장 수</div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="text-sm font-bold text-gray-700 block mb-2">
+                                            주간 목표 문장 수
+                                        </label>
+                                        <input
+                                            type="number"
+                                            placeholder={goal.toString()}
+                                            value={newGoal}
+                                            onChange={(e) => setNewGoal(e.target.value)}
+                                            className="w-full p-3 bg-gray-50 rounded-xl text-lg font-bold text-center border-2 border-transparent focus:border-pink-300 outline-none transition"
+                                            min="1"
+                                            max="500"
+                                        />
+                                        <div className="text-xs text-gray-500 mt-2 text-center">
+                                            💡 추천: 하루 3-5문장 × 7일 = 21-35문장
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[20, 30, 50].map(val => (
+                                            <button
+                                                key={val}
+                                                onClick={() => setNewGoal(val.toString())}
+                                                className="py-2 text-sm font-bold bg-gray-100 hover:bg-pink-100 hover:text-pink-600 rounded-lg transition"
+                                            >
+                                                {val}개
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={handleSetGoal}
+                                        className="w-full bg-pink-500 text-white py-3 rounded-xl font-bold mt-2 shadow-md hover:bg-pink-600 transition flex justify-center items-center gap-2"
+                                    >
+                                        <Save size={20} /> 목표 설정하기
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
             );
         };
 
@@ -409,14 +794,14 @@
             let line2 = null;
 
             if (isSomin) {
-                 color = "bg-pink-50 text-pink-700 border-pink-100";
-                 icon = <Sparkles size={16} className="text-pink-500 fill-pink-200" />;
-                 line1 = "이번 주도 꾸준히 성장 중! 🌸";
-                 line2 = (
+                color = "bg-pink-50 text-pink-700 border-pink-100";
+                icon = <Sparkles size={16} className="text-pink-500 fill-pink-200" />;
+                line1 = "이번 주도 꾸준히 성장 중! 🌸";
+                line2 = (
                     <span>
                         함께 <span className="font-black text-lg text-pink-600 underline decoration-pink-300 decoration-2 underline-offset-2">{myCount}문장</span>을 공부 중이에요.
                     </span>
-                 );
+                );
             } else {
                 const diff = myCount - rivalCount;
                 if (diff > 0) {
@@ -474,11 +859,11 @@
             const progress = Math.round((completedCount / activeItemsCount) * 100);
 
             const startEdit = (e, item) => { e.stopPropagation(); setEditingId(item.id); setEditValue(item.label); };
-            const saveEdit = (e) => { e.stopPropagation(); if(editValue.trim()) onUpdateStudyItem(editingId, editValue); setEditingId(null); };
+            const saveEdit = (e) => { e.stopPropagation(); if (editValue.trim()) onUpdateStudyItem(editingId, editValue); setEditingId(null); };
             const cancelEdit = (e) => { e.stopPropagation(); setEditingId(null); };
-            
+
             const saveNew = () => {
-                if(newValue.trim()) { onAddStudyItem(newValue); setNewValue(''); setIsAdding(false); }
+                if (newValue.trim()) { onAddStudyItem(newValue); setNewValue(''); setIsAdding(false); }
             };
 
             return (
@@ -505,9 +890,9 @@
                                     <span className="text-gray-400 text-sm ml-1">달성</span>
                                 </div>
                                 <p className="text-sm text-gray-500 mt-2">
-                                    {progress === 100 ? "완벽해요! 🎉 오늘은 푹 쉬세요." : 
-                                    progress >= 50 ? "절반 이상 왔어요! 힘내요 🔥" : 
-                                    "영어 고수를 향한 첫걸음! 🌱"}
+                                    {progress === 100 ? "완벽해요! 🎉 오늘은 푹 쉬세요." :
+                                        progress >= 50 ? "절반 이상 왔어요! 힘내요 🔥" :
+                                            "영어 고수를 향한 첫걸음! 🌱"}
                                 </p>
                             </div>
                         </div>
@@ -523,12 +908,12 @@
                                         <div key={item.id} onClick={() => !isEditing && onToggleItem(item.id)} className={`flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all duration-200 border-2 ${isDone ? 'bg-pink-50 border-pink-200 shadow-sm' : 'bg-white border-transparent shadow-sm hover:bg-white hover:border-gray-200 hover:shadow-md'}`}>
                                             <div className="flex items-center gap-4 flex-1">
                                                 <div className={`p-3 rounded-xl ${item.bg} ${item.color}`}><Icon size={24} /></div>
-                                                
+
                                                 {isEditing ? (
                                                     <div className="flex items-center gap-2 flex-1" onClick={e => e.stopPropagation()}>
                                                         <input autoFocus type="text" className="border-b-2 border-indigo-500 outline-none bg-transparent w-full text-lg font-bold" value={editValue} onChange={e => setEditValue(e.target.value)} onKeyDown={e => e.key === 'Enter' && saveEdit(e)} />
-                                                        <button onClick={saveEdit} className="text-green-600 p-1 hover:bg-green-100 rounded"><CheckCircle2 size={18}/></button>
-                                                        <button onClick={cancelEdit} className="text-gray-400 p-1 hover:bg-gray-100 rounded"><X size={18}/></button>
+                                                        <button onClick={saveEdit} className="text-green-600 p-1 hover:bg-green-100 rounded"><CheckCircle2 size={18} /></button>
+                                                        <button onClick={cancelEdit} className="text-gray-400 p-1 hover:bg-gray-100 rounded"><X size={18} /></button>
                                                     </div>
                                                 ) : (
                                                     <span className={`font-semibold text-lg flex-1 ${isDone ? 'text-gray-800' : 'text-gray-600'}`}>{item.label}</span>
@@ -594,10 +979,10 @@
             const getWeekDays = (date) => {
                 const d = new Date(date);
                 const day = d.getDay();
-                const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
                 const monday = new Date(d.setDate(diff));
                 const week = [];
-                for(let i=0; i<7; i++) {
+                for (let i = 0; i < 7; i++) {
                     const nextDay = new Date(monday);
                     nextDay.setDate(monday.getDate() + i);
                     week.push(nextDay);
@@ -617,11 +1002,11 @@
                 <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
                     <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-4">
                         <button onClick={() => changeDate(-7)} className="p-2 hover:bg-gray-100 rounded-full"><ChevronLeft size={20} /></button>
-                        <span className="font-bold text-gray-700 text-lg">{weekDays[0].getMonth()+1}월 {weekDays[0].getDate()}일 - {weekDays[6].getMonth()+1}월 {weekDays[6].getDate()}일</span>
+                        <span className="font-bold text-gray-700 text-lg">{weekDays[0].getMonth() + 1}월 {weekDays[0].getDate()}일 - {weekDays[6].getMonth() + 1}월 {weekDays[6].getDate()}일</span>
                         <button onClick={() => changeDate(7)} className="p-2 hover:bg-gray-100 rounded-full"><ChevronRight size={20} /></button>
                     </div>
                     <div className="bg-white p-6 md:p-10 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 className="font-bold text-gray-800 mb-8 flex items-center gap-2 text-xl"><BarChart3 size={24} className="text-pink-500"/> 주간 달성률</h3>
+                        <h3 className="font-bold text-gray-800 mb-8 flex items-center gap-2 text-xl"><BarChart3 size={24} className="text-pink-500" /> 주간 달성률</h3>
                         <div className="relative h-64">
                             <div className="absolute w-full border-t border-dashed border-gray-200 bottom-1/2 left-0 flex items-end"><span className="text-xs text-gray-400 -mt-5">50%</span></div>
                             <div className="absolute w-full border-t border-dashed border-gray-200 bottom-full left-0 flex items-end"><span className="text-xs text-gray-400 -mt-5">100%</span></div>
@@ -636,7 +1021,7 @@
                                                 <div className={`w-full max-w-[20px] md:max-w-[40px] rounded-t-xl transition-all duration-500 ${isToday ? 'bg-pink-500' : 'bg-pink-200 group-hover:bg-pink-300'}`} style={{ height: `${p}%` }}></div>
                                                 <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 text-sm font-bold bg-gray-800 text-white px-3 py-1 rounded-lg transition-all transform translate-y-2 group-hover:translate-y-0 whitespace-nowrap z-10 pointer-events-none">{p}%</div>
                                             </div>
-                                            <span className={`text-sm font-bold ${isToday ? 'text-pink-600' : 'text-gray-400'}`}>{day.toLocaleDateString('ko-KR', { weekday: 'short' }).replace('요일','')}</span>
+                                            <span className={`text-sm font-bold ${isToday ? 'text-pink-600' : 'text-gray-400'}`}>{day.toLocaleDateString('ko-KR', { weekday: 'short' }).replace('요일', '')}</span>
                                         </div>
                                     )
                                 })}
@@ -650,18 +1035,18 @@
         const MonthlyView = ({ currentDate, onDateChange, notebook, history, studyItems, setView }) => {
             return (
                 <div className="animate-fade-in max-w-3xl mx-auto space-y-4">
-                    <CalendarView 
-                        currentDate={currentDate} 
+                    <CalendarView
+                        currentDate={currentDate}
                         onDateChange={(d, isDayClick) => {
                             onDateChange(d);
-                            if(isDayClick && setView) setView('daily');
+                            if (isDayClick && setView) setView('daily');
                         }}
                         selectedDate={currentDate}
                         notebookData={notebook}
                         historyData={history}
                         studyItems={studyItems}
                     />
-                    
+
                     {/* 달성률 범례 */}
                     <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 grid grid-cols-4 gap-1">
                         <div className="flex flex-col items-center justify-center gap-1">
@@ -685,7 +1070,7 @@
             );
         };
 
-        const NotebookView = ({ notebook, onUpdateNotebook, userId, currentUser }) => {
+        const NotebookView = ({ notebook, onUpdateNotebook, userId, currentUser, onCopyToSomin }) => {
             const [isFormOpen, setIsFormOpen] = useState(false);
             const [editId, setEditId] = useState(null);
             const [formData, setFormData] = useState({ source: '', sentence: '', translation: '', note: '' });
@@ -693,7 +1078,10 @@
             const [validationError, setValidationError] = useState('');
             const [isCalendarOpen, setIsCalendarOpen] = useState(false);
             const [isStudyMode, setIsStudyMode] = useState(false);
-            
+
+            // 소민 학습장 복사 관련 상태
+            const [copyTarget, setCopyTarget] = useState(null); // { item, dateStr }
+
             const [dateRange, setDateRange] = useState({ start: new Date(), end: new Date() });
             const [tempRange, setTempRange] = useState({ start: new Date(), end: new Date() });
             const [rangeSelectionStep, setRangeSelectionStep] = useState('start');
@@ -773,6 +1161,18 @@
                 setIsFormOpen(false);
             };
 
+            // 소민 학습장 복사 핸들러
+            const handleCopyClick = (item, dateStr) => {
+                setCopyTarget({ item, dateStr });
+            };
+
+            const confirmCopy = () => {
+                if (copyTarget && onCopyToSomin) {
+                    onCopyToSomin(copyTarget.dateStr, copyTarget.item);
+                    setCopyTarget(null);
+                }
+            };
+
             const handleEdit = (item) => {
                 setFormData({ source: item.source, sentence: item.sentence, translation: item.translation, note: item.note });
                 setValidationError('');
@@ -788,7 +1188,7 @@
                     setDeleteTargetId(null);
                 }
             };
-            
+
             const handleToday = () => {
                 const today = new Date();
                 setDateRange({ start: today, end: today });
@@ -799,20 +1199,20 @@
             // --- Export / Import Handlers ---
             const handleFileUpload = (e) => {
                 const file = e.target.files[0];
-                if(!file) return;
+                if (!file) return;
                 const reader = new FileReader();
                 reader.onload = (evt) => {
                     try {
                         const bstr = evt.target.result;
-                        const wb = XLSX.read(bstr, {type:'binary'});
+                        const wb = XLSX.read(bstr, { type: 'binary' });
                         const wsname = wb.SheetNames[0];
                         const ws = wb.Sheets[wsname];
                         const data = XLSX.utils.sheet_to_json(ws);
-                        
+
                         const newItems = data.map((row, idx) => {
                             if (!row['영어 문장']) return null;
                             return {
-                                id: Date.now() + idx + Math.random().toString(), 
+                                id: Date.now() + idx + Math.random().toString(),
                                 source: row['출처'] || '',
                                 sentence: row['영어 문장'],
                                 translation: row['해석'] || '',
@@ -833,7 +1233,7 @@
                         console.error(err);
                         alert("오류 발생");
                     } finally {
-                        if(fileInputRef.current) fileInputRef.current.value = '';
+                        if (fileInputRef.current) fileInputRef.current.value = '';
                     }
                 };
                 reader.readAsBinaryString(file);
@@ -851,13 +1251,13 @@
                 XLSX.writeFile(wb, `MinEnglish_${userId}.xlsx`);
             };
 
-             const handleExportPDF = () => {
+            const handleExportPDF = () => {
                 if (totalCount === 0) { alert("내보낼 데이터가 없습니다."); return; }
                 const content = document.createElement('div');
                 content.style.padding = '40px';
                 content.style.fontFamily = 'Pretendard, sans-serif';
                 content.style.color = '#333';
-                
+
                 const title = document.createElement('h1');
                 title.textContent = `학습 기록 (${currentUser.name})`;
                 title.style.textAlign = 'center';
@@ -873,7 +1273,7 @@
                         const row = document.createElement('div');
                         row.style.marginBottom = '20px';
                         row.style.borderBottom = '1px solid #eee';
-                        row.innerHTML = `<div style="font-weight:bold;">${item.sentence}</div><div style="font-size:14px;color:#666;">${item.translation||''}</div>`;
+                        row.innerHTML = `<div style="font-weight:bold;">${item.sentence}</div><div style="font-size:14px;color:#666;">${item.translation || ''}</div>`;
                         content.appendChild(row);
                     });
                 });
@@ -887,18 +1287,18 @@
                     {/* Header */}
                     <div className="bg-white p-3 rounded-2xl shadow-sm border border-gray-100 flex-shrink-0 flex items-center justify-center">
                         <button onClick={() => { setTempRange(dateRange); setRangeSelectionStep('start'); setIsCalendarOpen(true); setCalendarCurrentDate(dateRange.start); }} className="flex items-center justify-center gap-2 font-bold text-lg md:text-xl text-gray-800 hover:bg-gray-50 px-4 py-2 rounded-xl transition w-full">
-                            <CalendarIcon size={20} className="text-pink-500"/>
-                            {isRangeMode ? 
-                                <span>{formatDate(dateRange.start).slice(5)} ~ {formatDate(dateRange.end).slice(5)}</span> : 
-                                <span>{dateRange.start.getFullYear()}년 {dateRange.start.getMonth()+1}월 {dateRange.start.getDate()}일</span>
+                            <CalendarIcon size={20} className="text-pink-500" />
+                            {isRangeMode ?
+                                <span>{formatDate(dateRange.start).slice(5)} ~ {formatDate(dateRange.end).slice(5)}</span> :
+                                <span>{dateRange.start.getFullYear()}년 {dateRange.start.getMonth() + 1}월 {dateRange.start.getDate()}일</span>
                             }
-                            <ChevronDown size={16} className="text-gray-400"/>
+                            <ChevronDown size={16} className="text-gray-400" />
                         </button>
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 flex flex-col min-h-0">
-                         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-3 px-1 gap-2 flex-shrink-0">
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-3 px-1 gap-2 flex-shrink-0">
                             <span className="text-sm font-bold text-gray-500 hidden md:inline">총 <span className="text-pink-600">{totalCount}</span>개의 기록 🌸</span>
                             <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                                 <input type="file" accept=".xlsx, .xls" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
@@ -910,7 +1310,7 @@
                                 <button onClick={() => setIsStudyMode(!isStudyMode)} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-md transition transform active:scale-95 whitespace-nowrap border ${isStudyMode ? 'bg-orange-500 text-white border-orange-500 hover:bg-orange-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}>
                                     <GraduationCap size={18} /> {isStudyMode ? '종료' : '학습'}
                                 </button>
-                                <button onClick={() => { setIsFormOpen(true); setEditId(null); setValidationError(''); setFormData({source:'', sentence:'', translation:'', note:''}); }} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-indigo-700 transition transform active:scale-95 whitespace-nowrap">
+                                <button onClick={() => { setIsFormOpen(true); setEditId(null); setValidationError(''); setFormData({ source: '', sentence: '', translation: '', note: '' }); }} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-indigo-700 transition transform active:scale-95 whitespace-nowrap">
                                     <Plus size={18} /> <span className="hidden md:inline">새 기록</span><span className="md:hidden">기록</span>
                                 </button>
                             </div>
@@ -919,7 +1319,7 @@
                         <div className="flex-1 overflow-y-auto no-scrollbar space-y-6 pb-4">
                             {displayedEntries.length === 0 ? (
                                 <div className="h-64 flex flex-col items-center justify-center text-center text-gray-400 bg-white/50 rounded-2xl border-2 border-dashed border-gray-200">
-                                    <Heart size={48} className="mb-4 text-pink-200 fill-pink-50"/>
+                                    <Heart size={48} className="mb-4 text-pink-200 fill-pink-50" />
                                     <p>기록된 문장이 없습니다.</p>
                                 </div>
                             ) : (
@@ -929,7 +1329,7 @@
                                             <div className="flex items-center gap-2 mb-3 px-2">
                                                 <div className="h-px bg-gray-200 flex-1"></div>
                                                 <span className="text-xs font-bold text-gray-500 bg-white/50 px-3 py-1 rounded-full border border-gray-200 shadow-sm">
-                                                    {group.date.toLocaleDateString('ko-KR', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})}
+                                                    {group.date.toLocaleDateString('ko-KR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                                 </span>
                                                 <div className="h-px bg-gray-200 flex-1"></div>
                                             </div>
@@ -942,15 +1342,24 @@
                                                     </div>
                                                     <div className="flex-1 space-y-1.5">
                                                         {item.source && <div className="inline-block bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-medium">{item.source}</div>}
-                                                        
+
                                                         <SentenceDisplay text={item.sentence} isStudyMode={isStudyMode} />
-                                                        
+
                                                         {item.translation && <p className="text-sm text-gray-600 break-keep whitespace-pre-wrap">{item.translation}</p>}
                                                         {item.note && <div className="bg-yellow-50 p-2.5 rounded-lg mt-2 text-xs text-yellow-800 border border-yellow-100 whitespace-pre-wrap"><span className="font-bold mr-1">💡 Note:</span> {item.note}</div>}
                                                     </div>
                                                     <div className="flex flex-col gap-1 ml-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                         <button onClick={() => handleEdit(item)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><Edit2 size={16} /></button>
-                                                        <button onClick={() => { setDeleteTargetId(item.id); setDateRange({start: group.date, end: group.date}); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 size={16} /></button>
+                                                        <button onClick={() => { setDeleteTargetId(item.id); setDateRange({ start: group.date, end: group.date }); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 size={16} /></button>
+                                                        {userId !== 'somin' && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); handleCopyClick(item, formatDate(group.date)); }}
+                                                                className="p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-lg transition"
+                                                                title="소민 학습장에 복사"
+                                                            >
+                                                                <Gift size={16} />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -968,7 +1377,7 @@
                             <div className="bg-white rounded-2xl p-4 w-[90%] max-w-sm shadow-2xl relative z-10 modal-content flex flex-col max-h-[85vh]">
                                 <div className="flex justify-between items-center mb-4 flex-shrink-0">
                                     <h3 className="font-bold text-gray-800 text-lg">날짜 선택</h3>
-                                    <button onClick={() => setIsCalendarOpen(false)} className="bg-gray-100 p-1 rounded-full"><X size={20}/></button>
+                                    <button onClick={() => setIsCalendarOpen(false)} className="bg-gray-100 p-1 rounded-full"><X size={20} /></button>
                                 </div>
                                 <div className="overflow-y-auto flex-1 min-h-0">
                                     <div className="flex justify-center mb-4 items-center gap-2">
@@ -996,21 +1405,21 @@
                             <div className="bg-white rounded-2xl p-5 md:p-6 w-full max-w-lg shadow-2xl relative z-10 modal-content max-h-[85vh] overflow-y-auto">
                                 <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4 sticky top-0 bg-white z-10">
                                     <h3 className="text-xl font-bold text-gray-800">{editId ? '기록 수정' : '새로운 기록'}</h3>
-                                    <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 bg-gray-100 p-1 rounded-full"><X size={20}/></button>
+                                    <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 bg-gray-100 p-1 rounded-full"><X size={20} /></button>
                                 </div>
                                 <div className="space-y-4 pb-2">
                                     <div className="bg-indigo-50 p-3 rounded-xl text-xs text-indigo-700 font-bold mb-2">💡 {formatDate(dateRange.end)}에 저장됩니다.</div>
-                                    <input type="text" placeholder="출처" className="w-full p-3 bg-gray-50 rounded-xl text-sm" value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})} />
-                                    <textarea placeholder="영어 문장 *" className={`w-full p-3 bg-gray-50 rounded-xl text-lg font-medium h-24 resize-none ${validationError ? 'border-2 border-red-200 bg-red-50' : ''}`} value={formData.sentence} onChange={e => { setFormData({...formData, sentence: e.target.value}); if(e.target.value.trim()) setValidationError(''); }} />
-                                    {validationError && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle size={12}/> {validationError}</p>}
-                                    <input type="text" placeholder="해석" className="w-full p-3 bg-gray-50 rounded-xl text-sm" value={formData.translation} onChange={e => setFormData({...formData, translation: e.target.value})} />
-                                    <textarea placeholder="노트" className="w-full p-3 bg-gray-50 rounded-xl text-sm h-20 resize-none" value={formData.note} onChange={e => setFormData({...formData, note: e.target.value})} />
+                                    <input type="text" placeholder="출처" className="w-full p-3 bg-gray-50 rounded-xl text-sm" value={formData.source} onChange={e => setFormData({ ...formData, source: e.target.value })} />
+                                    <textarea placeholder="영어 문장 *" className={`w-full p-3 bg-gray-50 rounded-xl text-lg font-medium h-24 resize-none ${validationError ? 'border-2 border-red-200 bg-red-50' : ''}`} value={formData.sentence} onChange={e => { setFormData({ ...formData, sentence: e.target.value }); if (e.target.value.trim()) setValidationError(''); }} />
+                                    {validationError && <p className="text-xs text-red-500 mt-1 flex items-center gap-1"><AlertCircle size={12} /> {validationError}</p>}
+                                    <input type="text" placeholder="해석" className="w-full p-3 bg-gray-50 rounded-xl text-sm" value={formData.translation} onChange={e => setFormData({ ...formData, translation: e.target.value })} />
+                                    <textarea placeholder="노트" className="w-full p-3 bg-gray-50 rounded-xl text-sm h-20 resize-none" value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} />
                                     <button onClick={handleSave} className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold mt-2 shadow-md flex justify-center items-center gap-2"><Save size={20} /> 저장하기</button>
                                 </div>
                             </div>
                         </div>
                     )}
-                    
+
                     {/* Delete Confirm Modal */}
                     {deleteTargetId && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1019,6 +1428,27 @@
                                 <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={28} className="text-red-500" /></div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-2">삭제하시겠습니까?</h3>
                                 <div className="flex gap-3"><button onClick={() => setDeleteTargetId(null)} className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl">취소</button><button onClick={() => confirmDelete(formatDate(dateRange.end))} className="flex-1 py-3 text-sm font-bold text-white bg-red-500 rounded-xl shadow-md">삭제</button></div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Copy to Somin Confirm Modal */}
+                    {copyTarget && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <div className="absolute inset-0 bg-black/40 modal-overlay backdrop-blur-sm" onClick={() => setCopyTarget(null)}></div>
+                            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl relative z-10 modal-content text-center">
+                                <div className="w-14 h-14 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Gift size={28} className="text-pink-500" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">소민 학습장에 복사할까요?</h3>
+                                <p className="text-sm text-gray-500 mb-2">선택한 문장을 소민이의 학습장에 복사합니다 🌸</p>
+                                <div className="bg-pink-50 p-3 rounded-xl mb-6 text-left">
+                                    <p className="text-sm font-bold text-pink-900 line-clamp-2">{copyTarget.item.sentence}</p>
+                                </div>
+                                <div className="flex gap-3">
+                                    <button onClick={() => setCopyTarget(null)} className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition">취소</button>
+                                    <button onClick={confirmCopy} className="flex-1 py-3 text-sm font-bold text-white bg-pink-500 rounded-xl hover:bg-pink-600 transition shadow-md">복사하기</button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1033,19 +1463,20 @@
             const [view, setView] = useState('daily');
             const [currentDate, setCurrentDate] = useState(new Date());
             const [isLoadingData, setIsLoadingData] = useState(true);
-            const [firebaseError, setFirebaseError] = useState(null); 
-            
+            const [firebaseError, setFirebaseError] = useState(null);
+
             // 데이터 상태
             const [history, setHistory] = useState({});
             const [notebook, setNotebook] = useState({});
             const [studyItems, setStudyItems] = useState(DEFAULT_STUDY_ITEMS);
-            
+            const [weeklyGoal, setWeeklyGoal] = useState(null);
+
             // 라이벌 데이터 (소연<->민우)
             const [rivalData, setRivalData] = useState(null);
 
             // 사용자별 Document ID 설정
             const USER_DOC_ID = `${userId}_study_data`;
-            
+
             // 현재 사용자 정보 (이름, 색상 등)
             const currentUser = USERS[userId] || USERS['soyeon'];
 
@@ -1060,13 +1491,14 @@
                     setIsLoadingData(true);
                     setFirebaseError(null);
                     const { doc, onSnapshot } = window.firebaseModules;
-                    
+
                     // 내 데이터 구독
                     const unsubMe = onSnapshot(doc(db, "minenglish", USER_DOC_ID), (docSnap) => {
                         if (docSnap.exists()) {
                             const data = docSnap.data();
                             setHistory(data.history || {});
                             setNotebook(data.notebook || {});
+                            setWeeklyGoal(data.weeklyGoal || null);
                             if (data.studyItems && Array.isArray(data.studyItems)) {
                                 setStudyItems(data.studyItems);
                             } else {
@@ -1076,6 +1508,7 @@
                             setHistory({});
                             setNotebook({});
                             setStudyItems(DEFAULT_STUDY_ITEMS);
+                            setWeeklyGoal(null);
                         }
                         setIsLoadingData(false);
                     }, (err) => {
@@ -1089,10 +1522,10 @@
                     });
 
                     // 라이벌 데이터 구독 (소연 or 민우일 때만)
-                    let unsubRival = () => {};
+                    let unsubRival = () => { };
                     if (rivalId) {
-                         const rivalDocId = `${rivalId}_study_data`;
-                         unsubRival = onSnapshot(doc(db, "minenglish", rivalDocId), (docSnap) => {
+                        const rivalDocId = `${rivalId}_study_data`;
+                        unsubRival = onSnapshot(doc(db, "minenglish", rivalDocId), (docSnap) => {
                             if (docSnap.exists()) {
                                 setRivalData(docSnap.data());
                             } else {
@@ -1105,14 +1538,16 @@
                 }
             }, [db, isReady, userId, rivalId]);
 
-            const saveData = async ({ newHistory, newNotebook, newStudyItems }) => {
+            const saveData = async ({ newHistory, newNotebook, newStudyItems, newWeeklyGoal }) => {
                 const nextHistory = newHistory || history;
                 const nextNotebook = newNotebook || notebook;
                 const nextStudyItems = newStudyItems || studyItems;
+                const nextWeeklyGoal = newWeeklyGoal !== undefined ? newWeeklyGoal : weeklyGoal;
 
                 if (newHistory) setHistory(newHistory);
                 if (newNotebook) setNotebook(newNotebook);
                 if (newStudyItems) setStudyItems(newStudyItems);
+                if (newWeeklyGoal !== undefined) setWeeklyGoal(newWeeklyGoal);
 
                 if (db) {
                     const { doc, setDoc } = window.firebaseModules;
@@ -1121,12 +1556,44 @@
                             history: nextHistory,
                             notebook: nextNotebook,
                             studyItems: nextStudyItems,
+                            weeklyGoal: nextWeeklyGoal,
                             lastUpdated: new Date().toISOString(),
                             userId: userId
                         }, { merge: true });
                     } catch (e) {
                         console.error("Save failed:", e);
                     }
+                }
+            };
+
+            const copyToSomin = async (dateStr, item) => {
+                if (!db) return;
+                const { doc, getDoc, setDoc } = window.firebaseModules;
+                const sominDocRef = doc(db, "minenglish", "somin_study_data");
+
+                try {
+                    const docSnap = await getDoc(sominDocRef);
+                    let currentNotebook = {};
+                    if (docSnap.exists()) {
+                        currentNotebook = docSnap.data().notebook || {};
+                    }
+
+                    const dayItems = currentNotebook[dateStr] || [];
+
+                    // 새 아이디 부여하여 추가
+                    const newItem = { ...item, id: Date.now().toString() };
+                    const newDayItems = [...dayItems, newItem];
+
+                    await setDoc(sominDocRef, {
+                        notebook: {
+                            ...currentNotebook,
+                            [dateStr]: newDayItems
+                        }
+                    }, { merge: true });
+                    alert("소민이의 학습장에 복사되었어요! 🌸");
+                } catch (e) {
+                    console.error("Copy failed:", e);
+                    alert("복사에 실패했습니다.");
                 }
             };
 
@@ -1144,7 +1611,7 @@
             const addStudyItem = (label) => {
                 const randomPalette = COLOR_PALETTES[Math.floor(Math.random() * COLOR_PALETTES.length)];
                 const randomIcon = ICON_NAMES[Math.floor(Math.random() * ICON_NAMES.length)];
-                
+
                 const newItem = {
                     id: Date.now().toString(),
                     label,
@@ -1173,6 +1640,10 @@
                 saveData({ newNotebook: newNotebook });
             };
 
+            const setWeeklyGoalValue = (goalValue) => {
+                saveData({ newWeeklyGoal: goalValue });
+            };
+
             const changeDate = (days) => {
                 const newDate = new Date(currentDate);
                 newDate.setDate(newDate.getDate() + days);
@@ -1183,23 +1654,26 @@
             const myWeeklyCount = useMemo(() => getWeeklyItemCount(notebook), [notebook]);
             const rivalWeeklyCount = useMemo(() => getWeeklyItemCount(rivalData?.notebook), [rivalData]);
 
+            // Streak 계산
+            const streakInfo = useMemo(() => calculateStreak(history, notebook), [history, notebook]);
+
             if (!isReady) {
                 return <div className="flex items-center justify-center h-screen bg-gray-50 text-gray-500">앱을 불러오는 중...</div>;
             }
 
             return (
                 <div className="w-full h-screen bg-gray-50 flex flex-col md:flex-row text-gray-800 overflow-hidden">
-                    
+
                     {/* [Desktop] Sidebar */}
                     <aside className="hidden md:flex flex-col w-64 bg-white/80 backdrop-blur-xl border-r border-white/50 p-6 shadow-sm z-20">
                         <div className="flex items-center gap-3 mb-10 px-2">
-                            <div className="bg-pink-500 p-2 rounded-xl text-white shadow-md transform rotate-3"><Heart size={24} className="fill-white"/></div>
-                            <div><h1 className="text-xl font-black text-gray-800 tracking-tight">Somin<br/>English</h1></div>
+                            <div className="bg-pink-500 p-2 rounded-xl text-white shadow-md transform rotate-3"><Heart size={24} className="fill-white" /></div>
+                            <div><h1 className="text-xl font-black text-gray-800 tracking-tight">Somin<br />English</h1></div>
                         </div>
 
                         {/* User Profile in Sidebar */}
                         <div className="mb-6 bg-white p-3 rounded-xl flex items-center gap-3 border border-gray-100 shadow-sm">
-                             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${currentUser.color}`}>
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${currentUser.color}`}>
                                 {currentUser.initial}
                             </div>
                             <div className="flex-1">
@@ -1207,17 +1681,34 @@
                                 <div className="text-xs text-gray-400">열심히 공부 중! 📚</div>
                             </div>
                         </div>
-                        
+
+                        {/* Streak Card (Desktop) */}
+                        <div className="mb-6">
+                            <p className="text-xs font-bold text-gray-400 mb-2 px-1">🔥 연속 학습 현황</p>
+                            <StreakCard streakInfo={streakInfo} />
+                        </div>
+
+                        {/* Weekly Goal (Desktop) */}
+                        <div className="mb-6">
+                            <p className="text-xs font-bold text-gray-400 mb-2 px-1">🎯 이번 주 목표</p>
+                            <WeeklyGoal
+                                weeklyCount={myWeeklyCount}
+                                weeklyGoal={weeklyGoal}
+                                onSetGoal={setWeeklyGoalValue}
+                                userId={userId}
+                            />
+                        </div>
+
                         {/* Rival Card (Desktop) */}
                         {((rivalId && rivalData) || isSomin) && (
                             <div className="mb-6">
                                 <p className="text-xs font-bold text-gray-400 mb-2 px-1">
                                     {isSomin ? '🌱 이번 주 학습 현황' : '🏆 이번 주 경쟁 현황'}
                                 </p>
-                                <RivalCard 
-                                    myCount={myWeeklyCount} 
-                                    rivalCount={rivalWeeklyCount} 
-                                    rivalName={rivalId ? USERS[rivalId].name : ''} 
+                                <RivalCard
+                                    myCount={myWeeklyCount}
+                                    rivalCount={rivalWeeklyCount}
+                                    rivalName={rivalId ? USERS[rivalId].name : ''}
                                     isSomin={isSomin}
                                 />
                             </div>
@@ -1231,7 +1722,7 @@
                                 <Book size={20} /> 학습장
                             </button>
                         </nav>
-                        
+
                         {/* Logout / Switch User */}
                         <div className="mt-auto pt-4 border-t border-gray-100">
                             <button onClick={onLogout} className="w-full flex items-center gap-2 text-gray-500 hover:text-gray-700 hover:bg-white px-4 py-2 rounded-lg transition text-sm">
@@ -1248,22 +1739,37 @@
                                 <div className="flex items-center gap-3">
                                     <div>
                                         <h1 className="text-xl font-black text-gray-800 tracking-tight flex items-center gap-2">
-                                            Somin English <Heart size={16} className="text-pink-500 fill-pink-500"/>
+                                            Somin English <Heart size={16} className="text-pink-500 fill-pink-500" />
                                         </h1>
                                         <p className="text-xs text-gray-500 flex items-center gap-1 font-bold mt-0.5">
-                                            <UserCircle size={10}/> {currentUser.name} 님이 학습 중
+                                            <UserCircle size={10} /> {currentUser.name} 님이 학습 중
                                         </p>
                                     </div>
                                 </div>
-                                <button onClick={onLogout} className="text-gray-400 hover:text-gray-600 p-2"><LogOut size={20}/></button>
+                                <button onClick={onLogout} className="text-gray-400 hover:text-gray-600 p-2"><LogOut size={20} /></button>
                             </div>
-                            
+
+                            {/* Streak Card (Mobile) */}
+                            <div className="mb-2">
+                                <StreakCard streakInfo={streakInfo} />
+                            </div>
+
+                            {/* Weekly Goal (Mobile) */}
+                            <div className="mb-2">
+                                <WeeklyGoal
+                                    weeklyCount={myWeeklyCount}
+                                    weeklyGoal={weeklyGoal}
+                                    onSetGoal={setWeeklyGoalValue}
+                                    userId={userId}
+                                />
+                            </div>
+
                             {/* Rival Card (Mobile) */}
                             {((rivalId && rivalData) || isSomin) && (
-                                <RivalCard 
-                                    myCount={myWeeklyCount} 
-                                    rivalCount={rivalWeeklyCount} 
-                                    rivalName={rivalId ? USERS[rivalId].name : ''} 
+                                <RivalCard
+                                    myCount={myWeeklyCount}
+                                    rivalCount={rivalWeeklyCount}
+                                    rivalName={rivalId ? USERS[rivalId].name : ''}
                                     isSomin={isSomin}
                                 />
                             )}
@@ -1283,7 +1789,7 @@
                                 </div>
                             )}
                         </header>
-                        
+
                         {/* [Mobile] Sub-tabs */}
                         {activeTab === 'scheduler' && (
                             <div className="md:hidden bg-white px-5 pb-3 border-b border-gray-100">
@@ -1297,20 +1803,20 @@
 
                         {/* View Area */}
                         <div className="flex-1 overflow-y-auto p-4 md:p-8">
-                             {/* Error Banner 표시 */}
+                            {/* Error Banner 표시 */}
                             {firebaseError && <ErrorBanner error={firebaseError} />}
 
                             {isLoadingData ? (
                                 <div className="h-full flex items-center justify-center text-gray-400 gap-2">
-                                    <RefreshCw className="animate-spin" size={20}/> {currentUser.name}님의 데이터 동기화 중...
+                                    <RefreshCw className="animate-spin" size={20} /> {currentUser.name}님의 데이터 동기화 중...
                                 </div>
                             ) : (
                                 activeTab === 'scheduler' ? (
                                     <>
                                         {view === 'daily' && (
-                                            <DailyView 
-                                                currentDate={currentDate} 
-                                                history={history} 
+                                            <DailyView
+                                                currentDate={currentDate}
+                                                history={history}
                                                 studyItems={studyItems}
                                                 onUpdateStudyItem={updateStudyItem}
                                                 onAddStudyItem={addStudyItem}
@@ -1320,7 +1826,7 @@
                                             />
                                         )}
                                         {view === 'weekly' && (
-                                            <WeeklyView 
+                                            <WeeklyView
                                                 currentDate={currentDate}
                                                 changeDate={changeDate}
                                                 history={history}
@@ -1328,7 +1834,7 @@
                                             />
                                         )}
                                         {view === 'monthly' && (
-                                            <MonthlyView 
+                                            <MonthlyView
                                                 currentDate={currentDate}
                                                 onDateChange={setCurrentDate}
                                                 notebook={notebook}
@@ -1339,11 +1845,12 @@
                                         )}
                                     </>
                                 ) : (
-                                    <NotebookView 
+                                    <NotebookView
                                         notebook={notebook}
                                         onUpdateNotebook={updateNotebook}
                                         userId={userId}
                                         currentUser={currentUser}
+                                        onCopyToSomin={copyToSomin}
                                     />
                                 )
                             )}
@@ -1390,4 +1897,5 @@
         root.render(<MainRoot />);
     </script>
 </body>
+
 </html>
