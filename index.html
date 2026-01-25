@@ -510,7 +510,7 @@
             );
         };
 
-        // --- Weekly Goal Component (Updated for Compact) ---
+        // --- Weekly Goal Component ---
         const WeeklyGoal = ({ goalData, onSetGoal, compact = false }) => {
             const [isEditing, setIsEditing] = useState(false);
             const [inputText, setInputText] = useState('');
@@ -533,8 +533,6 @@
             };
 
             const containerClass = `bg-white ${compact ? 'p-3 rounded-xl' : 'p-4 rounded-xl'} shadow-sm border border-pink-100 relative overflow-hidden flex-shrink-0 animate-fade-in ${compact ? 'h-full flex flex-col' : ''}`;
-
-            // PC 버전에서 텍스트가 잘리지 않도록 클래스 조정 (line-clamp 제거, whitespace-normal 등)
             const textClass = compact 
                 ? 'text-sm font-bold text-gray-800 break-words leading-tight line-clamp-2' 
                 : 'text-lg font-bold text-gray-800 break-words leading-snug whitespace-pre-wrap';
@@ -591,7 +589,7 @@
             );
         };
 
-        // --- Rival Card Component (Updated for Compact) ---
+        // --- Rival Card Component ---
         const RivalCard = ({ myCount, rivalCount, rivalName, isSomin, compact = false }) => {
             let color = "bg-blue-50 text-blue-700 border-blue-100";
             let icon = <Zap size={compact ? 14 : 16} />;
@@ -639,7 +637,6 @@
                 }
             }
 
-            // Compact 모드일 때는 truncate 유지, PC 모드(Sidebar)일 때는 wrap 허용
             const textClass1 = `text-xs font-bold opacity-80 ${compact ? 'mb-0 truncate' : 'mb-0.5 whitespace-normal'}`;
             const textClass2 = `${compact ? 'text-xs truncate' : 'text-sm whitespace-normal'} font-bold leading-tight`;
 
@@ -1177,7 +1174,11 @@
                         const row = document.createElement('div');
                         row.style.marginBottom = '20px';
                         row.style.borderBottom = '1px solid #eee';
-                        row.innerHTML = `<div style="font-weight:bold;">${item.sentence}</div><div style="font-size:14px;color:#666;">${item.translation || ''}</div>`;
+                        row.innerHTML = `
+                            <div style="font-weight:bold; margin-bottom:5px;">${item.sentence}</div>
+                            <div style="font-size:14px; color:#555; margin-bottom:5px;">${item.translation || ''}</div>
+                            ${item.note ? `<div style="font-size:12px; color:#666; background-color:#f9f9f9; padding:5px; border-radius:4px; margin-top:5px;">📝 ${item.note}</div>` : ''}
+                        `;
                         content.appendChild(row);
                     });
                 });
@@ -1202,15 +1203,16 @@
 
                     {/* Content */}
                     <div className="flex-1 flex flex-col min-h-0">
-                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-3 px-1 gap-2 flex-shrink-0 relative z-30">
+                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-3 px-1 gap-2 flex-shrink-0 relative z-50">
                             <span className="text-sm font-bold text-gray-500 hidden md:inline">총 <span className="text-pink-600">{totalCount}</span>개의 기록 🌸</span>
                             <div className="flex items-center gap-2 w-full md:w-auto justify-end">
                                 <input type="file" accept=".xlsx, .xls" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
-                                <div className="flex gap-1 mr-2">
+                                <div className="flex gap-1 mr-2 relative z-50">
                                     {/* Upload Button */}
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); fileInputRef.current.click(); }} 
                                         className="p-2 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition border border-blue-100 shadow-sm cursor-pointer active:scale-95"
+                                        style={{ pointerEvents: 'auto' }}
                                     >
                                         <Upload size={18} />
                                     </button>
@@ -1314,7 +1316,8 @@
                                 <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <Trash2 size={28} className="text-red-500" />
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">삭제하시겠습니까?</h3>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">목표를 삭제할까요?</h3>
+                                <p className="text-sm text-gray-500 mb-6">과거 기록은 유지되지만 리스트에서는 사라집니다.</p>
                                 <div className="flex gap-3">
                                     <button onClick={() => setDeleteTargetId(null)} className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition">취소</button>
                                     <button onClick={() => confirmDelete(formatDate(dateRange.end))} className="flex-1 py-3 text-sm font-bold text-white bg-red-500 rounded-xl shadow-md">삭제</button>
