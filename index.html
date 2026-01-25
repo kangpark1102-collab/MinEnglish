@@ -148,7 +148,8 @@
             ])
         );
 
-        const { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, BarChart3, Calendar: CalendarIcon, Trophy, Video, Headphones, BookOpen, Clapperboard, Gamepad2, LayoutDashboard, Book, Plus, Trash2, Edit2, X, Save, AlertCircle, RefreshCw, Cloud, AlertTriangle, MoreVertical, Settings, FileSpreadsheet, FileText, GraduationCap, UserCircle, LogOut, ArrowRight, Upload, CalendarDays, Calendar, Heart, Zap, Flame, Sparkles } = LucideIcons;
+        // Volume2 아이콘 추가
+        const { CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown, BarChart3, Calendar: CalendarIcon, Trophy, Video, Headphones, BookOpen, Clapperboard, Gamepad2, LayoutDashboard, Book, Plus, Trash2, Edit2, X, Save, AlertCircle, RefreshCw, Cloud, AlertTriangle, MoreVertical, Settings, FileSpreadsheet, FileText, GraduationCap, UserCircle, LogOut, ArrowRight, Upload, CalendarDays, Calendar, Heart, Zap, Flame, Sparkles, Volume2 } = LucideIcons;
 
         // 기본 공부 항목 (초기값)
         const DEFAULT_STUDY_ITEMS = [
@@ -482,9 +483,9 @@
                                     key={idx}
                                     onClick={() => onDateChange(day, true)}
                                     className={`aspect-square flex flex-col items-center justify-center relative rounded-xl transition-all duration-200
-                                        ${buttonClass}
-                                        ${isSelected && !edge && !inRange ? 'ring-2 ring-pink-500 ring-offset-2 z-10' : ''}
-                                        ${isToday && !edge && !inRange ? 'font-black ring-1 ring-inset ring-gray-300' : ''}
+                                    ${buttonClass}
+                                    ${isSelected && !edge && !inRange ? 'ring-2 ring-pink-500 ring-offset-2 z-10' : ''}
+                                    ${isToday && !edge && !inRange ? 'font-black ring-1 ring-inset ring-gray-300' : ''}
                                     `}
                                 >
                                     <span className="text-sm">{day.getDate()}</span>
@@ -1070,7 +1071,7 @@
             );
         };
 
-        const NotebookView = ({ notebook, onUpdateNotebook, userId, currentUser, onCopyToSomin }) => {
+        const NotebookView = ({ notebook, onUpdateNotebook, userId, currentUser }) => {
             const [isFormOpen, setIsFormOpen] = useState(false);
             const [editId, setEditId] = useState(null);
             const [formData, setFormData] = useState({ source: '', sentence: '', translation: '', note: '' });
@@ -1078,9 +1079,6 @@
             const [validationError, setValidationError] = useState('');
             const [isCalendarOpen, setIsCalendarOpen] = useState(false);
             const [isStudyMode, setIsStudyMode] = useState(false);
-
-            // 소민 학습장 복사 관련 상태
-            const [copyTarget, setCopyTarget] = useState(null); // { item, dateStr }
 
             const [dateRange, setDateRange] = useState({ start: new Date(), end: new Date() });
             const [tempRange, setTempRange] = useState({ start: new Date(), end: new Date() });
@@ -1090,6 +1088,30 @@
 
             const fileInputRef = useRef(null);
             const isRangeMode = formatDate(dateRange.start) !== formatDate(dateRange.end);
+
+            // 음성 듣기 (TTS) 기능
+            const speakText = (text) => {
+                if (!window.speechSynthesis) {
+                    alert("이 브라우저는 음성 듣기를 지원하지 않습니다.");
+                    return;
+                }
+                
+                // 기존 음성 중지
+                window.speechSynthesis.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                
+                // 언어 및 속도 설정
+                utterance.lang = 'en-US'; 
+                utterance.rate = 0.9; // 공부하기 좋게 약간 천천히
+
+                // 목소리 찾기 (영어)
+                const voices = window.speechSynthesis.getVoices();
+                const enVoice = voices.find(v => v.lang.includes('en-US') && !v.name.includes('Google')) || voices.find(v => v.lang.includes('en'));
+                if (enVoice) utterance.voice = enVoice;
+
+                window.speechSynthesis.speak(utterance);
+            };
 
             const getDatesInRange = (startDate, endDate) => {
                 const date = new Date(startDate.getTime());
@@ -1159,18 +1181,6 @@
                 setValidationError('');
                 setEditId(null);
                 setIsFormOpen(false);
-            };
-
-            // 소민 학습장 복사 핸들러
-            const handleCopyClick = (item, dateStr) => {
-                setCopyTarget({ item, dateStr });
-            };
-
-            const confirmCopy = () => {
-                if (copyTarget && onCopyToSomin) {
-                    onCopyToSomin(copyTarget.dateStr, copyTarget.item);
-                    setCopyTarget(null);
-                }
             };
 
             const handleEdit = (item) => {
@@ -1343,7 +1353,19 @@
                                                     <div className="flex-1 space-y-1.5">
                                                         {item.source && <div className="inline-block bg-gray-100 text-gray-500 text-[10px] px-1.5 py-0.5 rounded font-medium">{item.source}</div>}
 
-                                                        <SentenceDisplay text={item.sentence} isStudyMode={isStudyMode} />
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="flex-1">
+                                                                <SentenceDisplay text={item.sentence} isStudyMode={isStudyMode} />
+                                                            </div>
+                                                            {/* TTS 듣기 버튼 */}
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); speakText(item.sentence); }}
+                                                                className="p-1.5 text-gray-400 hover:text-pink-500 hover:bg-pink-50 rounded-full transition-colors shrink-0 mt-0.5"
+                                                                title="듣기"
+                                                            >
+                                                                <Volume2 size={20} />
+                                                            </button>
+                                                        </div>
 
                                                         {item.translation && <p className="text-sm text-gray-600 break-keep whitespace-pre-wrap">{item.translation}</p>}
                                                         {item.note && <div className="bg-yellow-50 p-2.5 rounded-lg mt-2 text-xs text-yellow-800 border border-yellow-100 whitespace-pre-wrap"><span className="font-bold mr-1">💡 Note:</span> {item.note}</div>}
@@ -1351,15 +1373,6 @@
                                                     <div className="flex flex-col gap-1 ml-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                                         <button onClick={() => handleEdit(item)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><Edit2 size={16} /></button>
                                                         <button onClick={() => { setDeleteTargetId(item.id); setDateRange({ start: group.date, end: group.date }); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><Trash2 size={16} /></button>
-                                                        {userId !== 'somin' && (
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); handleCopyClick(item, formatDate(group.date)); }}
-                                                                className="p-1.5 text-pink-300 hover:text-pink-500 hover:bg-pink-50 rounded-lg transition"
-                                                                title="소민 학습장에 복사"
-                                                            >
-                                                                <Gift size={16} />
-                                                            </button>
-                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -1428,27 +1441,6 @@
                                 <div className="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4"><Trash2 size={28} className="text-red-500" /></div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-2">삭제하시겠습니까?</h3>
                                 <div className="flex gap-3"><button onClick={() => setDeleteTargetId(null)} className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl">취소</button><button onClick={() => confirmDelete(formatDate(dateRange.end))} className="flex-1 py-3 text-sm font-bold text-white bg-red-500 rounded-xl shadow-md">삭제</button></div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Copy to Somin Confirm Modal */}
-                    {copyTarget && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                            <div className="absolute inset-0 bg-black/40 modal-overlay backdrop-blur-sm" onClick={() => setCopyTarget(null)}></div>
-                            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl relative z-10 modal-content text-center">
-                                <div className="w-14 h-14 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Gift size={28} className="text-pink-500" />
-                                </div>
-                                <h3 className="text-lg font-bold text-gray-900 mb-2">소민 학습장에 복사할까요?</h3>
-                                <p className="text-sm text-gray-500 mb-2">선택한 문장을 소민이의 학습장에 복사합니다 🌸</p>
-                                <div className="bg-pink-50 p-3 rounded-xl mb-6 text-left">
-                                    <p className="text-sm font-bold text-pink-900 line-clamp-2">{copyTarget.item.sentence}</p>
-                                </div>
-                                <div className="flex gap-3">
-                                    <button onClick={() => setCopyTarget(null)} className="flex-1 py-3 text-sm font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition">취소</button>
-                                    <button onClick={confirmCopy} className="flex-1 py-3 text-sm font-bold text-white bg-pink-500 rounded-xl hover:bg-pink-600 transition shadow-md">복사하기</button>
-                                </div>
                             </div>
                         </div>
                     )}
@@ -1563,37 +1555,6 @@
                     } catch (e) {
                         console.error("Save failed:", e);
                     }
-                }
-            };
-
-            const copyToSomin = async (dateStr, item) => {
-                if (!db) return;
-                const { doc, getDoc, setDoc } = window.firebaseModules;
-                const sominDocRef = doc(db, "minenglish", "somin_study_data");
-
-                try {
-                    const docSnap = await getDoc(sominDocRef);
-                    let currentNotebook = {};
-                    if (docSnap.exists()) {
-                        currentNotebook = docSnap.data().notebook || {};
-                    }
-
-                    const dayItems = currentNotebook[dateStr] || [];
-
-                    // 새 아이디 부여하여 추가
-                    const newItem = { ...item, id: Date.now().toString() };
-                    const newDayItems = [...dayItems, newItem];
-
-                    await setDoc(sominDocRef, {
-                        notebook: {
-                            ...currentNotebook,
-                            [dateStr]: newDayItems
-                        }
-                    }, { merge: true });
-                    alert("소민이의 학습장에 복사되었어요! 🌸");
-                } catch (e) {
-                    console.error("Copy failed:", e);
-                    alert("복사에 실패했습니다.");
                 }
             };
 
@@ -1850,7 +1811,6 @@
                                         onUpdateNotebook={updateNotebook}
                                         userId={userId}
                                         currentUser={currentUser}
-                                        onCopyToSomin={copyToSomin}
                                     />
                                 )
                             )}
