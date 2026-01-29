@@ -1325,6 +1325,81 @@
                             </div>
                         </div>
                     )}
+
+                     {/* [FIX] 추가된 폼 모달 (누락되었던 부분) */}
+                    {isFormOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <div className="absolute inset-0 bg-black/40 modal-overlay backdrop-blur-sm" onClick={resetForm}></div>
+                            <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl relative z-10 modal-content overflow-y-auto max-h-[90vh]">
+                                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                    {editId ? <Edit2 className="text-pink-500" /> : <Plus className="text-pink-500" />}
+                                    {editId ? '기록 수정하기' : '새로운 문장 기록'}
+                                </h3>
+                                
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">출처 (선택)</label>
+                                        <input type="text" value={formData.source} onChange={e => setFormData({...formData, source: e.target.value})} placeholder="예: 미드 프렌즈, 유튜브 등" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 transition" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">영어 문장 <span className="text-pink-500">*</span></label>
+                                        <input type="text" value={formData.sentence} onChange={e => setFormData({...formData, sentence: e.target.value})} placeholder="영어 문장을 입력하세요" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 transition font-medium" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">해석 (선택)</label>
+                                        <input type="text" value={formData.translation} onChange={e => setFormData({...formData, translation: e.target.value})} placeholder="한글 해석을 입력하세요" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 transition" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">나만의 노트 (선택)</label>
+                                        <textarea value={formData.note} onChange={e => setFormData({...formData, note: e.target.value})} placeholder="문법 포인트, 단어, 느낌 등을 메모해보세요." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:border-pink-500 transition h-24 resize-none" />
+                                    </div>
+                                    {validationError && <p className="text-red-500 text-sm font-bold flex items-center gap-1"><AlertCircle size={14} /> {validationError}</p>}
+                                </div>
+
+                                <div className="flex gap-3 mt-8">
+                                    <button onClick={resetForm} className="flex-1 py-3.5 rounded-xl bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition">취소</button>
+                                    <button onClick={handleSave} className="flex-1 py-3.5 rounded-xl bg-pink-500 text-white font-bold hover:bg-pink-600 shadow-md transition transform active:scale-95">저장하기</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* [FIX] 추가된 캘린더 모달 (누락되었던 부분) */}
+                    {isCalendarOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                            <div className="absolute inset-0 bg-black/40 modal-overlay backdrop-blur-sm" onClick={() => setIsCalendarOpen(false)}></div>
+                            <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-md shadow-2xl relative z-10 modal-content">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-bold text-gray-900">
+                                        {rangeSelectionStep === 'start' ? '시작 날짜 선택' : '종료 날짜 선택'}
+                                    </h3>
+                                    <button onClick={handleToday} className="text-xs font-bold bg-pink-100 text-pink-600 px-3 py-1.5 rounded-full hover:bg-pink-200 transition">오늘</button>
+                                </div>
+                                
+                                <div className="mb-4 bg-gray-50 p-3 rounded-xl text-center">
+                                     <span className={`font-bold ${rangeSelectionStep === 'start' ? 'text-pink-600 border-b-2 border-pink-500' : 'text-gray-400'}`}>
+                                        {tempRange.start ? formatDate(tempRange.start) : '시작일'}
+                                     </span>
+                                     <span className="mx-2 text-gray-400">~</span>
+                                     <span className={`font-bold ${rangeSelectionStep === 'end' ? 'text-pink-600 border-b-2 border-pink-500' : 'text-gray-400'}`}>
+                                        {rangeSelectionStep === 'end' ? (tempRange.end ? formatDate(tempRange.end) : '종료일') : '...'}
+                                     </span>
+                                </div>
+
+                                <CalendarView 
+                                    currentDate={calendarCurrentDate} 
+                                    onDateChange={handleRangeSelect} 
+                                    selectedDate={rangeSelectionStep === 'start' ? tempRange.start : null}
+                                    rangeStart={rangeSelectionStep === 'end' ? tempRange.start : null}
+                                    notebookData={notebook}
+                                />
+                                
+                                <div className="mt-4 flex justify-end">
+                                    <button onClick={() => setIsCalendarOpen(false)} className="text-gray-500 font-bold px-4 py-2 hover:bg-gray-100 rounded-lg transition">닫기</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
